@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -41,10 +42,24 @@ fun CatalogScreen(
     repository: VehicleRepository = remember { VehicleRepository() },
 ) {
     var page by rememberSaveable { mutableIntStateOf(0) }
-    val catalogPage = repository.catalogPage(page)
+    // `form` es lo que se está escribiendo; `applied` solo cambia al pulsar "Buscar".
+    var form by rememberSaveable(stateSaver = FilterForm.Saver) { mutableStateOf(FilterForm()) }
+    var applied by rememberSaveable(stateSaver = FilterForm.Saver) { mutableStateOf(FilterForm()) }
+    val catalogPage = repository.catalogPage(page, filter = applied.toFilter())
 
     CatalogContent(
         catalogPage = catalogPage,
+        form = form,
+        onFormChange = { form = it },
+        onSearch = {
+            applied = form
+            page = 0
+        },
+        onClear = {
+            form = FilterForm()
+            applied = FilterForm()
+            page = 0
+        },
         onPrevious = { page = catalogPage.page - 1 },
         onNext = { page = catalogPage.page + 1 },
         modifier = modifier,
@@ -54,6 +69,10 @@ fun CatalogScreen(
 @Composable
 fun CatalogContent(
     catalogPage: CatalogPage,
+    form: FilterForm,
+    onFormChange: (FilterForm) -> Unit,
+    onSearch: () -> Unit,
+    onClear: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
@@ -70,8 +89,10 @@ fun CatalogContent(
                 fontWeight = FontWeight.Bold,
             )
         }
+        item { FilterPanel(form, onFormChange, onSearch, onClear) }
         if (catalogPage.items.isEmpty()) {
-            item { Text("No hay vehículos disponibles por el momento.") }
+            // HU-05 criterio 2: sin coincidencias se informa al usuario.
+            item { Text("Sin resultados", style = MaterialTheme.typography.titleMedium) }
         }
         items(catalogPage.items, key = { it.id }) { VehicleCard(it) }
         item {
