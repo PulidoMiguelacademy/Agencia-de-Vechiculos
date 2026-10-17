@@ -36,8 +36,12 @@ import androidx.compose.ui.unit.dp
 import com.example.agencia_de_vechiculos.data.TestDriveRepository
 import com.example.agencia_de_vechiculos.data.sampleVehicles
 import com.example.agencia_de_vechiculos.model.Branch
+import com.example.agencia_de_vechiculos.model.InterestLevel
 import com.example.agencia_de_vechiculos.model.TestDriveAppointment
 import com.example.agencia_de_vechiculos.model.TestDriveBookingResult
+import com.example.agencia_de_vechiculos.model.TestDriveCompleteResult
+import com.example.agencia_de_vechiculos.model.TestDriveOutcome
+import com.example.agencia_de_vechiculos.model.TestDriveStartResult
 import com.example.agencia_de_vechiculos.model.TestDriveStatus
 import com.example.agencia_de_vechiculos.model.Vehicle
 import com.example.agencia_de_vechiculos.model.VehicleStatus
@@ -61,10 +65,27 @@ fun TestDriveScreen(
     var date by rememberSaveable { mutableStateOf("2026-10-20") }
     var selectedTime by rememberSaveable { mutableStateOf("09:00") }
 
-    var lastResult by remember { mutableStateOf<TestDriveBookingResult?>(null) }
+    var lastBookingResult by remember { mutableStateOf<TestDriveBookingResult?>(null) }
     var appointments by remember { mutableStateOf(repository.allAppointments()) }
+    var outcomes by remember { mutableStateOf(repository.allOutcomes()) }
+
+    val activeOrInProgress = appointments.filter {
+        it.status == TestDriveStatus.ACTIVA || it.status == TestDriveStatus.EN_CURSO
+    }
+    var selectedAppointmentId by rememberSaveable {
+        mutableIntStateOf(activeOrInProgress.firstOrNull()?.id ?: 1)
+    }
+    var licenseNumber by rememberSaveable { mutableStateOf("") }
+    var licenseExpiration by rememberSaveable { mutableStateOf("2028-12-31") }
+    var distanceKmText by rememberSaveable { mutableStateOf("") }
+    var selectedInterest by rememberSaveable { mutableStateOf(InterestLevel.ALTO) }
+    var observations by rememberSaveable { mutableStateOf("") }
+
+    var lastStartResult by remember { mutableStateOf<TestDriveStartResult?>(null) }
+    var lastCompleteResult by remember { mutableStateOf<TestDriveCompleteResult?>(null) }
 
     val occupiedSlots = repository.occupiedSlots(selectedVehicleId, selectedBranch, date)
+    val selectedAppointment = appointments.find { it.id == selectedAppointmentId }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -79,12 +100,12 @@ fun TestDriveScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Agendar prueba de manejo",
+                        text = "Pruebas de manejo",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = "Duración: ${TestDriveAppointment.DURATION_MINUTES} min • Máx. ${TestDriveAppointment.MAX_ACTIVE_PER_CLIENT} pruebas activas por cliente",
+                        text = "Duración: ${TestDriveAppointment.DURATION_MINUTES} min • Máx. ${TestDriveAppointment.MAX_ACTIVE_PER_CLIENT} activas • Licencia vigente obligatoria",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -104,7 +125,7 @@ fun TestDriveScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Text(
-                        text = "Datos de la reserva",
+                        text = "Agendar cita de prueba",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -112,7 +133,7 @@ fun TestDriveScreen(
                     OutlinedTextField(
                         value = clientName,
                         onValueChange = { clientName = it },
-                        label = { Text("Cliente (Nombre completo)") },
+                        label = { Text("Nombre del cliente") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -135,7 +156,7 @@ fun TestDriveScreen(
                             FilterChip(
                                 selected = selectedVehicleId == vehicle.id,
                                 onClick = { selectedVehicleId = vehicle.id },
-                                label = { Text("${vehicle.brand} ${vehicle.model} (${vehicle.year})") },
+                                label = { Text("${vehicle.brand} ${vehicle.model} ${vehicle.year}") },
                             )
                         }
                     }
@@ -157,7 +178,7 @@ fun TestDriveScreen(
                     OutlinedTextField(
                         value = date,
                         onValueChange = { date = it },
-                        label = { Text("Fecha (AAAA-MM-DD)") },
+                        label = { Text("Fecha de la cita") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -175,7 +196,7 @@ fun TestDriveScreen(
                     }
 
                     Text(
-                        text = "Hora (bloques de 30 minutos)",
+                        text = "Horario disponible",
                         style = MaterialTheme.typography.labelLarge,
                     )
                     Row(
@@ -188,7 +209,7 @@ fun TestDriveScreen(
                                 selected = selectedTime == slot,
                                 onClick = { selectedTime = slot },
                                 label = {
-                                    Text(if (isBusy) "$slot (Ocupado)" else slot)
+                                    Text(if (isBusy) "$slot • Ocupado" else slot)
                                 },
                             )
                         }
@@ -204,8 +225,11 @@ fun TestDriveScreen(
                                 date = date,
                                 time = selectedTime,
                             )
-                            lastResult = result
+                            lastBookingResult = result
                             appointments = repository.allAppointments()
+                            if (result is TestDriveBookingResult.Confirmed) {
+                                selectedAppointmentId = result.appointment.id
+                            }
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -215,7 +239,7 @@ fun TestDriveScreen(
             }
         }
 
-        lastResult?.let { result ->
+        lastBookingResult?.let { result ->
             item {
                 BookingFeedbackCard(
                     result = result,
@@ -229,30 +253,407 @@ fun TestDriveScreen(
                             date = date,
                             time = suggestedSlot,
                         )
-                        lastResult = retryResult
+                        lastBookingResult = retryResult
                         appointments = repository.allAppointments()
+                        if (retryResult is TestDriveBookingResult.Confirmed) {
+                            selectedAppointmentId = retryResult.appointment.id
+                        }
                     },
                 )
             }
         }
 
         item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(
+                        text = "Registrar resultado de la prueba",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "Valida la licencia vigente del cliente antes de iniciar la prueba y registra el resultado al finalizar.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    Text("Cita seleccionada", style = MaterialTheme.typography.labelLarge)
+                    if (activeOrInProgress.isEmpty()) {
+                        Text(
+                            text = "No hay citas pendientes en este momento.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    } else {
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            activeOrInProgress.forEach { appt ->
+                                FilterChip(
+                                    selected = selectedAppointmentId == appt.id,
+                                    onClick = {
+                                        selectedAppointmentId = appt.id
+                                        lastStartResult = null
+                                        lastCompleteResult = null
+                                    },
+                                    label = {
+                                        Text("${appt.clientName} • ${appt.date} ${appt.time} • ${appt.status.label}")
+                                    },
+                                )
+                            }
+                        }
+                    }
+
+                    Text("Validación de licencia", style = MaterialTheme.typography.labelLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = licenseNumber,
+                            onValueChange = { licenseNumber = it },
+                            label = { Text("Número de licencia") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        OutlinedTextField(
+                            value = licenseExpiration,
+                            onValueChange = { licenseExpiration = it },
+                            label = { Text("Fecha de vigencia") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        AssistChip(
+                            onClick = {
+                                licenseNumber = if (licenseNumber.isBlank()) "LIC-10293847" else licenseNumber
+                                licenseExpiration = "2028-12-31"
+                            },
+                            label = { Text("Cargar licencia vigente") },
+                        )
+                        AssistChip(
+                            onClick = {
+                                licenseNumber = if (licenseNumber.isBlank()) "LIC-99887766" else licenseNumber
+                                licenseExpiration = "2024-05-10"
+                            },
+                            label = { Text("Cargar licencia vencida") },
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            val result = repository.startTestDrive(
+                                appointmentId = selectedAppointmentId,
+                                licenseNumber = licenseNumber,
+                                licenseExpirationDate = licenseExpiration,
+                            )
+                            lastStartResult = result
+                            lastCompleteResult = null
+                            appointments = repository.allAppointments()
+                        },
+                        enabled = activeOrInProgress.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Validar licencia e iniciar prueba")
+                    }
+
+                    lastStartResult?.let { startRes ->
+                        StartResultFeedback(startRes)
+                    }
+
+                    Text("Evaluación final de la prueba", style = MaterialTheme.typography.labelLarge)
+                    OutlinedTextField(
+                        value = distanceKmText,
+                        onValueChange = { distanceKmText = it.filter { ch -> ch.isDigit() }.take(4) },
+                        label = { Text("Kilometraje recorrido en km") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    Text("Nivel de interés del cliente", style = MaterialTheme.typography.labelLarge)
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        InterestLevel.entries.forEach { level ->
+                            FilterChip(
+                                selected = selectedInterest == level,
+                                onClick = { selectedInterest = level },
+                                label = { Text("Interés ${level.label}") },
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = observations,
+                        onValueChange = { observations = it },
+                        label = { Text("Observaciones de la prueba") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    val canComplete = selectedAppointment?.status == TestDriveStatus.EN_CURSO
+                    Button(
+                        onClick = {
+                            val km = distanceKmText.toIntOrNull() ?: 0
+                            val result = repository.completeTestDrive(
+                                appointmentId = selectedAppointmentId,
+                                distanceKm = km,
+                                interestLevel = selectedInterest,
+                                observations = observations,
+                            )
+                            lastCompleteResult = result
+                            appointments = repository.allAppointments()
+                            outcomes = repository.allOutcomes()
+                            if (result is TestDriveCompleteResult.Completed) {
+                                distanceKmText = ""
+                                observations = ""
+                                val nextActive = appointments.firstOrNull {
+                                    it.status == TestDriveStatus.ACTIVA || it.status == TestDriveStatus.EN_CURSO
+                                }
+                                if (nextActive != null) {
+                                    selectedAppointmentId = nextActive.id
+                                }
+                            }
+                        },
+                        enabled = canComplete,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            if (canComplete) {
+                                "Registrar resultado y programar seguimiento"
+                            } else {
+                                "Inicia la prueba con licencia vigente para habilitar"
+                            }
+                        )
+                    }
+
+                    lastCompleteResult?.let { completeRes ->
+                        CompleteResultFeedback(completeRes)
+                    }
+                }
+            }
+        }
+
+        if (outcomes.isNotEmpty()) {
+            item {
+                Text(
+                    text = "Resultados y seguimientos programados",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+
+            items(outcomes, key = { it.appointmentId }) { outcome ->
+                val appt = appointments.find { it.id == outcome.appointmentId }
+                val vehicle = vehicles.find { it.id == appt?.vehicleId }
+                OutcomeCard(
+                    outcome = outcome,
+                    clientName = appt?.clientName ?: "Cliente",
+                    vehicleTitle = vehicle?.let { "${it.brand} ${it.model} ${it.year}" } ?: "Vehículo",
+                )
+            }
+        }
+
+        item {
             Text(
-                text = "Citas agendadas (${appointments.count { it.status == TestDriveStatus.ACTIVA }} activas)",
+                text = "Citas agendadas",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
         }
 
-        items(appointments.filter { it.status == TestDriveStatus.ACTIVA }, key = { it.id }) { appointment ->
+        items(activeOrInProgress, key = { it.id }) { appointment ->
             val vehicle = vehicles.find { it.id == appointment.vehicleId }
             AppointmentCard(
                 appointment = appointment,
-                vehicleTitle = vehicle?.let { "${it.brand} ${it.model} (${it.year})" } ?: "Vehículo #${appointment.vehicleId}",
+                vehicleTitle = vehicle?.let { "${it.brand} ${it.model} ${it.year}" } ?: "Vehículo #${appointment.vehicleId}",
+                onSelectForResult = {
+                    selectedAppointmentId = appointment.id
+                },
                 onCancel = {
                     repository.cancelAppointment(appointment.id)
                     appointments = repository.allAppointments()
                 },
+            )
+        }
+    }
+}
+
+@Composable
+private fun StartResultFeedback(result: TestDriveStartResult) {
+    when (result) {
+        is TestDriveStartResult.Started -> {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                ),
+            ) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Licencia vigente validada — Prueba en curso",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    Text(
+                        text = "Cita de ${result.appointment.clientName} iniciada con licencia ${result.appointment.licenseNumber} vigente hasta ${result.appointment.licenseExpirationDate}.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
+        }
+
+        is TestDriveStartResult.LicenseExpired -> {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                ),
+            ) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "No se permite iniciar la prueba por licencia vencida",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                    Text(
+                        text = result.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
+        }
+
+        is TestDriveStartResult.InvalidStartData -> {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                ),
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        text = result.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompleteResultFeedback(result: TestDriveCompleteResult) {
+    when (result) {
+        is TestDriveCompleteResult.Completed -> {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                ),
+            ) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "¡Resultado registrado y seguimiento programado!",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    Text(
+                        text = result.outcome.scheduledFollowUp,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
+        }
+
+        is TestDriveCompleteResult.LicenseNotValidated -> {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                ),
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        text = result.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
+        }
+
+        is TestDriveCompleteResult.InvalidOutcomeData -> {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                ),
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        text = result.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OutcomeCard(
+    outcome: TestDriveOutcome,
+    clientName: String,
+    vehicleTitle: String,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "$clientName • $vehicleTitle",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                AssistChip(
+                    onClick = {},
+                    label = { Text("Interés: ${outcome.interestLevel.label}") },
+                )
+            }
+            Text(
+                text = "Licencia: ${outcome.licenseNumber} • Vigente hasta ${outcome.licenseExpirationDate} • Recorrido: ${outcome.distanceKm} km",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = "Observaciones: ${outcome.observations}",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = outcome.scheduledFollowUp,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
             )
         }
     }
@@ -302,7 +703,7 @@ private fun BookingFeedbackCard(
                         color = MaterialTheme.colorScheme.onErrorContainer,
                     )
                     Text(
-                        text = "Selecciona uno de estos horarios libres disponibles (30 min):",
+                        text = "Selecciona uno de estos horarios libres disponibles:",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                     )
@@ -362,6 +763,7 @@ private fun BookingFeedbackCard(
 private fun AppointmentCard(
     appointment: TestDriveAppointment,
     vehicleTitle: String,
+    onSelectForResult: () -> Unit,
     onCancel: () -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -382,17 +784,26 @@ private fun AppointmentCard(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "Cliente: ${appointment.clientName} (Tel: ${appointment.phone})",
+                    text = "Cliente: ${appointment.clientName} • Tel: ${appointment.phone}",
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    text = "Fecha: ${appointment.date} a las ${appointment.time} (${appointment.durationMinutes} min)",
+                    text = "Fecha: ${appointment.date} a las ${appointment.time} • ${appointment.durationMinutes} min • Estado: ${appointment.status.label}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
-            OutlinedButton(onClick = onCancel) {
-                Text("Cancelar")
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                AssistChip(
+                    onClick = onSelectForResult,
+                    label = { Text("Seleccionar") },
+                )
+                OutlinedButton(onClick = onCancel) {
+                    Text("Cancelar")
+                }
             }
         }
     }
