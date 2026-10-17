@@ -40,6 +40,7 @@ import java.util.Locale
 fun CatalogScreen(
     modifier: Modifier = Modifier,
     repository: VehicleRepository = remember { VehicleRepository() },
+    onScheduleTestDrive: ((Vehicle) -> Unit)? = null,
 ) {
     var page by rememberSaveable { mutableIntStateOf(0) }
     // `form` es lo que se está escribiendo; `applied` solo cambia al pulsar "Buscar".
@@ -62,6 +63,7 @@ fun CatalogScreen(
         },
         onPrevious = { page = catalogPage.page - 1 },
         onNext = { page = catalogPage.page + 1 },
+        onScheduleTestDrive = onScheduleTestDrive,
         modifier = modifier,
     )
 }
@@ -76,6 +78,7 @@ fun CatalogContent(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
+    onScheduleTestDrive: ((Vehicle) -> Unit)? = null,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -94,7 +97,9 @@ fun CatalogContent(
             // HU-05 criterio 2: sin coincidencias se informa al usuario.
             item { Text("Sin resultados", style = MaterialTheme.typography.titleMedium) }
         }
-        items(catalogPage.items, key = { it.id }) { VehicleCard(it) }
+        items(catalogPage.items, key = { it.id }) {
+            VehicleCard(vehicle = it, onScheduleTestDrive = onScheduleTestDrive)
+        }
         item {
             // Criterio 2: al llegar al final de la lista se puede pasar de página.
             PaginationBar(catalogPage, onPrevious, onNext)
@@ -103,7 +108,11 @@ fun CatalogContent(
 }
 
 @Composable
-fun VehicleCard(vehicle: Vehicle, modifier: Modifier = Modifier) {
+fun VehicleCard(
+    vehicle: Vehicle,
+    modifier: Modifier = Modifier,
+    onScheduleTestDrive: ((Vehicle) -> Unit)? = null,
+) {
     Card(modifier = modifier.fillMaxWidth()) {
         Column {
             // Criterio 1: foto. Placeholder hasta contar con una librería de imágenes (photoUrl).
@@ -151,6 +160,14 @@ fun VehicleCard(vehicle: Vehicle, modifier: Modifier = Modifier) {
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.tertiary,
                     )
+                }
+                if (onScheduleTestDrive != null && vehicle.status == VehicleStatus.DISPONIBLE) {
+                    OutlinedButton(
+                        onClick = { onScheduleTestDrive(vehicle) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Agendar prueba de manejo")
+                    }
                 }
             }
         }
