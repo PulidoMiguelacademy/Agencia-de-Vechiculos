@@ -21,5 +21,6 @@ data class Vehicle(
     val mileageKm: Int,
     val status: VehicleStatus,
     val fuel: FuelType,
+    val vin: String,
     val photoUrl: String? = null,
 )
