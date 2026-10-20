@@ -575,7 +575,8 @@ private fun loadThumbnail(resolver: android.content.ContentResolver, uri: Uri): 
 
 /**
  * 
- * un mensaje en el color principal si salió bien, o en rojo si es un error
+ * agrega a la lista la tarjeta del mensaje, solo si el mensaje es de esa parte de
+ * la pantalla. Así cada mensaje sale justo debajo del formulario que lo produjo
  * 
  */
 private fun LazyListScope.sectionMessage(message: ScreenMessage?, section: Section) {

@@ -14,6 +14,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+/**
+ * 
+ * la tarjeta que muestra el resultado de una acción, con los mismos colores que
+ * usa el equipo en la prueba de manejo: el color principal suave
+ * (primaryContainer) si salió bien y rojo claro (errorContainer) si hubo un
+ * problema
+ * 
+ * los colores salen del tema de la app, así cambian solos con el modo oscuro y
+ * con el color del teléfono. El título es opcional y va en negrita; sin título,
+ * el mensaje va en semi-negrita. Debajo del mensaje se puede poner contenido
+ * extra (content), por ejemplo los botones con otros horarios
+ * 
+ */
 @Composable
 fun FeedbackCard(
     message: String,
@@ -22,6 +35,11 @@ fun FeedbackCard(
     title: String? = null,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
+    /**
+     * 
+     * el color de fondo y el del texto, según si es un error o no
+     * 
+     */
     val containerColor = if (isError) {
         MaterialTheme.colorScheme.errorContainer
     } else {
