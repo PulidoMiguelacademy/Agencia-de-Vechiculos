@@ -30,6 +30,17 @@ import com.example.agencia_de_vechiculos.model.DeliveryStatus
 import com.example.agencia_de_vechiculos.model.ProcedureAdvanceResult
 import com.example.agencia_de_vechiculos.model.ProcedureStatus
 
+/**
+ * 
+ * la tarjeta de la entrega del vehículo, que aparece en la pantalla de contratos
+ * cuando el contrato está firmado (HU-25)
+ * 
+ * muestra cada trámite con su estado y un botón para avanzarlo (iniciar, completar
+ * o aprobar), y cuando hace falta, el campo para su número. Debajo deja programar
+ * la entrega y, ya programada, firmar el acta para cerrar la venta. Después de cada
+ * acción muestra un mensaje y avisa con onChange para que la pantalla se actualice
+ * 
+ */
 @Composable
 fun DeliverySection(
     delivery: Delivery,
@@ -40,9 +51,30 @@ fun DeliverySection(
     modifier: Modifier = Modifier,
 ) {
     val folio = delivery.quotationFolio
+    /**
+     * 
+     * lo que el asesor va escribiendo en el campo del número de cada trámite
+     * 
+     */
     var references by remember(folio) { mutableStateOf(mapOf<DeliveryProcedure, String>()) }
+    /**
+     * 
+     * la fecha de entrega escrita en el campo. Empieza con la programada o, si no
+     * hay, con la de hoy
+     * 
+     */
     var deliveryDate by remember(folio) { mutableStateOf(delivery.deliveryDate ?: today) }
+    /**
+     * 
+     * el nombre de quien firma el acta. Empieza con el nombre del cliente
+     * 
+     */
     var signer by remember(folio) { mutableStateOf(clientName) }
+    /**
+     * 
+     * el último mensaje: el texto y si es un error (se pinta de rojo)
+     * 
+     */
     var message by remember(folio) { mutableStateOf<Pair<String, Boolean>?>(null) }
 
     Card(modifier = modifier.fillMaxWidth()) {

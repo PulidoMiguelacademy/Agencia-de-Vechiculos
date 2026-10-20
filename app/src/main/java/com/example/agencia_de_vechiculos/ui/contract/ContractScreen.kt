@@ -55,12 +55,13 @@ import java.util.Locale
 
 /**
  * 
- * la pantalla de contratos de venta (HU-24)
+ * la pantalla de contratos de venta (HU-24) y de la entrega del vehículo (HU-25)
  * 
  * el asesor elige una cotización y ve sus datos y su expediente. Desde aquí genera
  * el contrato con su PDF, registra la firma (y el vehículo pasa a vendido) y puede
- * ver el PDF. Cada acción muestra un mensaje: en el color principal si salió bien
- * y en rojo si no
+ * ver el PDF. Cuando el contrato está firmado aparece la entrega del vehículo,
+ * donde se hacen los trámites y se cierra la venta. Cada acción muestra un
+ * mensaje: en el color principal si salió bien y en rojo si no
  * 
  */
 @Composable
@@ -111,6 +112,12 @@ fun ContractScreen(
 
     val quotation = quotations.first { it.folio == selectedFolio }
     val contract = remember(selectedFolio, version) { repository.contractFor(selectedFolio) }
+    /**
+     * 
+     * la entrega del vehículo de la cotización elegida. Solo existe cuando el contrato
+     * está firmado
+     * 
+     */
     val delivery = remember(selectedFolio, version) { deliveryRepository.deliveryFor(selectedFolio) }
     val pdfFile = pdfFiles[selectedFolio]
 
