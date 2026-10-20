@@ -38,11 +38,27 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * 
+ * la pantalla de citas de taller (HU-26)
+ * 
+ * el cliente escribe la placa (o la elige de los vehículos registrados), el
+ * servicio, la sucursal, la fecha y el horario. Los horarios sin cupo se marcan,
+ * pero se pueden elegir para ver otras opciones. Al confirmar se muestra el
+ * recordatorio o, si no hay cupo, las otras opciones, que agendan con un toque.
+ * Debajo se ven las citas de ese día en esa sucursal
+ * 
+ */
 @Composable
 fun WorkshopScreen(
     modifier: Modifier = Modifier,
     repository: WorkshopRepository = remember { WorkshopRepository() },
 ) {
+    /**
+     * 
+     * la fecha de hoy (AAAA-MM-DD), para no dejar agendar en días que ya pasaron
+     * 
+     */
     val today = remember { SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date()) }
 
     var plate by rememberSaveable { mutableStateOf("") }
@@ -51,13 +67,40 @@ fun WorkshopScreen(
     var date by rememberSaveable { mutableStateOf("2026-10-20") }
     var selectedTime by rememberSaveable { mutableStateOf(WorkshopRepository.TIME_SLOTS.first()) }
     var comments by rememberSaveable { mutableStateOf("") }
+    /**
+     * 
+     * el resultado del último intento de agendar
+     * 
+     */
     var lastResult by remember { mutableStateOf<WorkshopBookingResult?>(null) }
+    /**
+     * 
+     * cambia cada vez que se intenta agendar, para que la pantalla vuelva a leer las
+     * citas y los horarios libres
+     * 
+     */
     var version by remember { mutableIntStateOf(0) }
 
+    /**
+     * 
+     * el vehículo registrado de la placa escrita, o null si no hay ninguno
+     * 
+     */
     val vehicle = repository.registeredVehicle(plate)
+    /**
+     * 
+     * las citas y los horarios libres de la sucursal y el día elegidos
+     * 
+     */
     val dayAppointments = remember(selectedBranch, date, version) { repository.appointmentsFor(selectedBranch, date) }
     val availableSlots = remember(selectedBranch, date, version) { repository.availableSlots(selectedBranch, date) }
 
+    /**
+     * 
+     * intenta agendar en un horario. También se usa al tocar una de las otras
+     * opciones, por eso primero deja esa fecha y esa hora en el formulario
+     * 
+     */
     fun book(slot: WorkshopSlot) {
         date = slot.date
         selectedTime = slot.time
@@ -237,6 +280,12 @@ fun WorkshopScreen(
     }
 }
 
+/**
+ * 
+ * la tarjeta con el resultado de agendar: el recordatorio si salió bien, o el
+ * problema en rojo. Cuando no hay cupo muestra las otras opciones como botones
+ * 
+ */
 @Composable
 private fun BookingResultCard(
     result: WorkshopBookingResult,
