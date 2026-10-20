@@ -22,4 +22,4 @@
 
 3. **Verifica que el proyecto compile sin errores antes de subir tus cambios.**
 
-4. **Sube tu rama y crea el Pull Request apuntando únicamente a `develop` (NUNCA a `main` ni a ninguna otra rama).**
+4. **Sube tu rama y haz git push apuntando únicamente a `develop` (NUNCA a `main` ni a ninguna otra rama).**
