@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.agencia_de_vechiculos.data.ContractRepository
+import com.example.agencia_de_vechiculos.data.DeliveryRepository
 import com.example.agencia_de_vechiculos.data.TestDriveRepository
 import com.example.agencia_de_vechiculos.data.VehicleRepository
 import com.example.agencia_de_vechiculos.data.WorkshopRepository
@@ -44,6 +45,7 @@ class MainActivity : ComponentActivity() {
                 val testDriveRepository = remember { TestDriveRepository() }
                 val vehicleRepository = remember { VehicleRepository() }
                 val contractRepository = remember { ContractRepository(vehicleRepository = vehicleRepository) }
+                val deliveryRepository = remember { DeliveryRepository(contractRepository) }
                 val workshopRepository = remember { WorkshopRepository() }
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -90,6 +92,7 @@ class MainActivity : ComponentActivity() {
                             2 -> ContractScreen(
                                 vehicleRepository = vehicleRepository,
                                 repository = contractRepository,
+                                deliveryRepository = deliveryRepository,
                             )
                             else -> WorkshopScreen(repository = workshopRepository)
                         }
