@@ -51,6 +51,16 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * 
+ * la pantalla de contratos de venta (HU-24)
+ * 
+ * el asesor elige una cotización y ve sus datos y su expediente. Desde aquí genera
+ * el contrato con su PDF, registra la firma (y el vehículo pasa a vendido) y puede
+ * ver el PDF. Cada acción muestra un mensaje: en el color principal si salió bien
+ * y en rojo si no
+ * 
+ */
 @Composable
 fun ContractScreen(
     modifier: Modifier = Modifier,
@@ -58,21 +68,53 @@ fun ContractScreen(
     repository: ContractRepository = remember { ContractRepository(vehicleRepository = vehicleRepository) },
 ) {
     val context = LocalContext.current
+    /**
+     * 
+     * guarda los PDF en la carpeta contratos, dentro de los archivos privados de la app
+     * 
+     */
     val pdfWriter = remember { ContractPdfWriter(File(context.filesDir, "contratos")) }
+    /**
+     * 
+     * la fecha de hoy como AAAA-MM-DD. Se usa como fecha de emisión del PDF y como
+     * fecha de firma propuesta
+     * 
+     */
     val today = remember { SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date()) }
 
     val quotations = remember { repository.allQuotations() }
     var selectedFolio by rememberSaveable { mutableStateOf(quotations.first().folio) }
     var signedDate by rememberSaveable { mutableStateOf(today) }
+    /**
+     * 
+     * cambia cada vez que se genera o se firma un contrato, para que la pantalla vuelva
+     * a leer el contrato del repositorio
+     * 
+     */
     var version by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<ScreenMessage?>(null) }
+    /**
+     * 
+     * el último PDF creado de cada cotización
+     * 
+     */
     var pdfFiles by remember { mutableStateOf(mapOf<String, File>()) }
+    /**
+     * 
+     * la cotización cuyo PDF se está mostrando, o null si no se muestra ninguno
+     * 
+     */
     var previewFolio by remember { mutableStateOf<String?>(null) }
 
     val quotation = quotations.first { it.folio == selectedFolio }
     val contract = remember(selectedFolio, version) { repository.contractFor(selectedFolio) }
     val pdfFile = pdfFiles[selectedFolio]
 
+    /**
+     * 
+     * crea (o vuelve a crear) el PDF de un contrato y lo guarda en pdfFiles
+     * 
+     */
     fun writePdf(saleContract: SaleContract) {
         val vehicle = vehicleRepository.vehicleById(saleContract.vehicleId) ?: return
         pdfFiles = pdfFiles + (saleContract.quotationFolio to pdfWriter.write(saleContract, vehicle, today))
@@ -222,6 +264,15 @@ fun ContractScreen(
     }
 }
 
+/**
+ * 
+ * la tarjeta con los datos de la cotización elegida: estado, cliente, vehículo con
+ * su VIN, precio, forma de pago, anticipo y cómo va cada documento del expediente
+ * 
+ * los documentos que faltan salen en rojo, igual que la cotización si no está
+ * aceptada
+ * 
+ */
 @Composable
 private fun QuotationCard(
     quotation: Quotation,
@@ -275,6 +326,11 @@ private fun QuotationCard(
     }
 }
 
+/**
+ * 
+ * la tarjeta con los datos del contrato generado, con el saldo a pagar en negrita
+ * 
+ */
 @Composable
 private fun ContractCard(contract: SaleContract) {
     Card(
@@ -304,6 +360,15 @@ private fun ContractCard(contract: SaleContract) {
     }
 }
 
+/**
+ * 
+ * muestra la primera hoja del PDF como una imagen dentro de la app
+ * 
+ * usa PdfRenderer, que ya viene en Android, para convertir la hoja en imagen al
+ * doble de tamaño y que se lea bien. Vuelve a dibujarla si el archivo cambia, por
+ * ejemplo al registrar la firma
+ * 
+ */
 @Composable
 private fun PdfPreview(file: File) {
     val bitmap = remember(file, file.lastModified()) {
@@ -325,7 +390,17 @@ private fun PdfPreview(file: File) {
     )
 }
 
+/**
+ * 
+ * el mensaje que se muestra después de una acción. isError lo pinta de rojo
+ * 
+ */
 private data class ScreenMessage(val text: String, val isError: Boolean = false)
 
+/**
+ * 
+ * escribe un precio como en el catálogo, con puntos de miles: $ 59.500.000
+ * 
+ */
 private fun formatPrice(value: Long): String =
     "$ ${NumberFormat.getIntegerInstance(Locale.forLanguageTag("es-CO")).format(value)}"

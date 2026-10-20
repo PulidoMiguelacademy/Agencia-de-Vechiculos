@@ -13,28 +13,86 @@ import com.example.agencia_de_vechiculos.model.Reservation
 import com.example.agencia_de_vechiculos.model.SaleContract
 import com.example.agencia_de_vechiculos.model.VehicleStatus
 
+/**
+ * 
+ * guarda los contratos de venta y se encarga de generarlos y de registrar su firma
+ * (HU-24)
+ * 
+ * por ahora todo vive en memoria: las cotizaciones, los expedientes y las reservas
+ * son datos de ejemplo hasta que existan sus propias HU (13, 23 y 08). Usa el
+ * mismo VehicleRepository del catálogo, así un vehículo vendido deja de aparecer
+ * allí
+ * 
+ */
 class ContractRepository(
     private val quotations: List<Quotation> = sampleQuotations,
     private val customerFiles: List<CustomerFile> = sampleCustomerFiles,
     private val reservations: List<Reservation> = sampleReservations,
     private val vehicleRepository: VehicleRepository = VehicleRepository(),
 ) {
+    /**
+     * 
+     * los contratos que ya se generaron
+     * 
+     */
     private val contracts = mutableListOf<SaleContract>()
+
+    /**
+     * 
+     * el número que le toca al próximo contrato
+     * 
+     */
     private var nextId = 1
 
+    /**
+     * 
+     * devuelve todas las cotizaciones, aceptadas o no
+     * 
+     */
     fun allQuotations(): List<Quotation> = quotations.toList()
 
+    /**
+     * 
+     * devuelve todos los contratos generados
+     * 
+     */
     fun allContracts(): List<SaleContract> = contracts.toList()
 
+    /**
+     * 
+     * devuelve el contrato de una cotización, o null si todavía no tiene
+     * 
+     */
     fun contractFor(quotationFolio: String): SaleContract? =
         contracts.firstOrNull { it.quotationFolio == quotationFolio }
 
+    /**
+     * 
+     * devuelve el expediente de un cliente, o null si no tiene
+     * 
+     */
     fun customerFileFor(clientDocument: String): CustomerFile? =
         customerFiles.firstOrNull { it.clientDocument == clientDocument }
 
+    /**
+     * 
+     * devuelve la reserva que hizo un cliente sobre un vehículo, o null si no reservó
+     * 
+     */
     fun reservationFor(vehicleId: Int, clientDocument: String): Reservation? =
         reservations.firstOrNull { it.vehicleId == vehicleId && it.clientDocument == clientDocument }
 
+    /**
+     * 
+     * genera el contrato de una cotización
+     * 
+     * revisa, en orden, que la cotización exista y esté aceptada, que no tenga ya un
+     * contrato (una cotización genera uno solo), que el expediente del cliente esté
+     * completo y que el vehículo no se haya vendido. Si todo está bien, arma el
+     * contrato con los datos de la cotización, el VIN del vehículo y el anticipo de
+     * la reserva, que se descuenta del precio (si no hubo reserva, el anticipo es 0)
+     * 
+     */
     fun generate(quotationFolio: String): ContractGenerationResult {
         val quotation = quotations.firstOrNull { it.folio == quotationFolio.trim() }
             ?: return ContractGenerationResult.InvalidData("La cotización seleccionada no existe")
@@ -78,6 +136,15 @@ class ContractRepository(
         return ContractGenerationResult.Generated(contract)
     }
 
+    /**
+     * 
+     * registra que el cliente firmó el contrato de una cotización
+     * 
+     * revisa que el contrato exista, que no se haya firmado antes y que la fecha venga
+     * como AAAA-MM-DD. Después marca el contrato como firmado con esa fecha y pasa el
+     * vehículo a vendido
+     * 
+     */
     fun registerSigned(quotationFolio: String, signedDate: String): ContractSignResult {
         val index = contracts.indexOfFirst { it.quotationFolio == quotationFolio.trim() }
         if (index == -1) {
@@ -103,10 +170,21 @@ class ContractRepository(
     }
 
     companion object {
+        /**
+         * 
+         * el formato que debe tener la fecha de firma: AAAA-MM-DD
+         * 
+         */
         private val DATE_REGEX = Regex("^\\d{4}-\\d{2}-\\d{2}$")
     }
 }
 
+/**
+ * 
+ * cotizaciones de ejemplo, una para cada caso: lista para firmar, con el expediente
+ * incompleto, sin reserva y sin aceptar
+ * 
+ */
 val sampleQuotations = listOf(
     Quotation(
         folio = "COT-0001",
@@ -146,6 +224,12 @@ val sampleQuotations = listOf(
     ),
 )
 
+/**
+ * 
+ * expedientes de ejemplo de los clientes de las cotizaciones. El de Sofía Torres
+ * no existe a propósito
+ * 
+ */
 val sampleCustomerFiles = listOf(
     CustomerFile(
         clientDocument = "1012345678",
@@ -173,6 +257,11 @@ val sampleCustomerFiles = listOf(
     ),
 )
 
+/**
+ * 
+ * reservas de ejemplo con el anticipo que pagó cada cliente
+ * 
+ */
 val sampleReservations = listOf(
     Reservation(id = 1, vehicleId = 4, clientDocument = "1012345678", depositAmount = 5_000_000),
     Reservation(id = 2, vehicleId = 9, clientDocument = "52345678", depositAmount = 10_000_000),
