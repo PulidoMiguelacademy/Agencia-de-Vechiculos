@@ -246,10 +246,10 @@ class WorkshopRepository(
  * 
  */
 val sampleRegisteredVehicles = listOf(
-    RegisteredVehicle("ABC123", "Carlos Pérez", "Renault", "Duster", 2020),
-    RegisteredVehicle("DEF456", "Laura Gómez", "Mazda", "3", 2022),
-    RegisteredVehicle("GHI789", "Andrés Ramírez", "Toyota", "Corolla", 2025),
-    RegisteredVehicle("JKL012", "Sofía Torres", "Kia", "Picanto", 2020),
+    RegisteredVehicle("ABC123", "Carlos Pérez", "Renault", "Duster", 2020, 68_500),
+    RegisteredVehicle("DEF456", "Laura Gómez", "Mazda", "3", 2022, 31_200),
+    RegisteredVehicle("GHI789", "Andrés Ramírez", "Toyota", "Corolla", 2025, 1_200),
+    RegisteredVehicle("JKL012", "Sofía Torres", "Kia", "Picanto", 2020, 60_100),
 )
 
 /**

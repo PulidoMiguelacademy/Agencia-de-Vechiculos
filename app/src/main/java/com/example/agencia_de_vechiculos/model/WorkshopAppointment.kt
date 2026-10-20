@@ -55,6 +55,8 @@ data class RegisteredVehicle(
      *
      */
     val year: Int,
+
+    val lastMileageKm: Int,
 )
 
 /**
