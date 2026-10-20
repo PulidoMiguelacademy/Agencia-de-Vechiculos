@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.agencia_de_vechiculos.data.ContractPdfWriter
 import com.example.agencia_de_vechiculos.data.ContractRepository
+import com.example.agencia_de_vechiculos.data.DeliveryRepository
 import com.example.agencia_de_vechiculos.data.VehicleRepository
 import com.example.agencia_de_vechiculos.model.ContractGenerationResult
 import com.example.agencia_de_vechiculos.model.ContractSignResult
@@ -45,6 +46,7 @@ import com.example.agencia_de_vechiculos.model.DocumentType
 import com.example.agencia_de_vechiculos.model.Quotation
 import com.example.agencia_de_vechiculos.model.QuotationStatus
 import com.example.agencia_de_vechiculos.model.SaleContract
+import com.example.agencia_de_vechiculos.ui.delivery.DeliverySection
 import java.io.File
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -66,6 +68,7 @@ fun ContractScreen(
     modifier: Modifier = Modifier,
     vehicleRepository: VehicleRepository = remember { VehicleRepository() },
     repository: ContractRepository = remember { ContractRepository(vehicleRepository = vehicleRepository) },
+    deliveryRepository: DeliveryRepository = remember { DeliveryRepository(repository) },
 ) {
     val context = LocalContext.current
     /**
@@ -108,6 +111,7 @@ fun ContractScreen(
 
     val quotation = quotations.first { it.folio == selectedFolio }
     val contract = remember(selectedFolio, version) { repository.contractFor(selectedFolio) }
+    val delivery = remember(selectedFolio, version) { deliveryRepository.deliveryFor(selectedFolio) }
     val pdfFile = pdfFiles[selectedFolio]
 
     /**
@@ -242,6 +246,18 @@ fun ContractScreen(
                             }
                         }
                     }
+                }
+            }
+
+            if (delivery != null) {
+                item {
+                    DeliverySection(
+                        delivery = delivery,
+                        clientName = contract.clientName,
+                        today = today,
+                        repository = deliveryRepository,
+                        onChange = { version++ },
+                    )
                 }
             }
 
