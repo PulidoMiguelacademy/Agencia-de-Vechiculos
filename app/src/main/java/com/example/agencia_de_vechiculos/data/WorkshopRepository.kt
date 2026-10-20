@@ -30,6 +30,7 @@ class WorkshopRepository(
      * 
      */
     private val appointments = initialAppointments.toMutableList()
+
     /**
      * 
      * el número que le toca a la próxima cita: uno más que la última que exista
@@ -178,6 +179,7 @@ class WorkshopRepository(
          * 
          */
         const val DAILY_CAPACITY = 4
+
         /**
          * 
          * cuántas opciones se ofrecen como máximo y cuántos días hacia adelante se buscan

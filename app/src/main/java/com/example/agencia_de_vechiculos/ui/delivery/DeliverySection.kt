@@ -51,12 +51,14 @@ fun DeliverySection(
     modifier: Modifier = Modifier,
 ) {
     val folio = delivery.quotationFolio
+
     /**
      * 
      * lo que el asesor va escribiendo en el campo del número de cada trámite
      * 
      */
     var references by remember(folio) { mutableStateOf(mapOf<DeliveryProcedure, String>()) }
+
     /**
      * 
      * la fecha de entrega escrita en el campo. Empieza con la programada o, si no
@@ -64,12 +66,14 @@ fun DeliverySection(
      * 
      */
     var deliveryDate by remember(folio) { mutableStateOf(delivery.deliveryDate ?: today) }
+
     /**
      * 
      * el nombre de quien firma el acta. Empieza con el nombre del cliente
      * 
      */
     var signer by remember(folio) { mutableStateOf(clientName) }
+
     /**
      * 
      * el último mensaje: el texto y si es un error (se pinta de rojo)

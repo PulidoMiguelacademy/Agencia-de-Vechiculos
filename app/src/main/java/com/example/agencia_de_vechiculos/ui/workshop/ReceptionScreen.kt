@@ -55,18 +55,52 @@ import com.example.agencia_de_vechiculos.model.VehicleArea
 import java.text.NumberFormat
 import java.util.Locale
 
+/**
+ * 
+ * la pantalla de recepción de vehículos en el taller (HU-27)
+ * 
+ * muestra las citas de hoy. Al elegir una se registra la llegada y se abre la
+ * orden; después se llena el acta (kilometraje, combustible, pertenencias y
+ * solicitud), se marcan los daños previos con sus fotos y el cliente firma. Ya
+ * firmada, el acta se muestra completa y sin poder cambiarse
+ * 
+ */
 @Composable
 fun ReceptionScreen(
     repository: ServiceOrderRepository,
     today: String,
     modifier: Modifier = Modifier,
 ) {
+    /**
+     * 
+     * cambia después de cada acción, para que la pantalla vuelva a leer las citas y la
+     * orden
+     * 
+     */
     var version by remember { mutableIntStateOf(0) }
     val appointments = remember(version) { repository.appointmentsOfDay(today) }
+
+    /**
+     * 
+     * la cita elegida. Empieza con la primera del día
+     * 
+     */
     var selectedAppointmentId by remember { mutableStateOf(appointments.firstOrNull()?.id) }
+
+    /**
+     * 
+     * el último mensaje y la parte de la pantalla donde se debe mostrar
+     * 
+     */
     var message by remember { mutableStateOf<ScreenMessage?>(null) }
 
     val appointment = appointments.firstOrNull { it.id == selectedAppointmentId }
+
+    /**
+     * 
+     * la orden de la cita elegida, o null si el vehículo todavía no ha llegado
+     * 
+     */
     val order = remember(selectedAppointmentId, version) {
         selectedAppointmentId?.let { repository.orderForAppointment(it) }
     }
@@ -237,6 +271,12 @@ fun ReceptionScreen(
     }
 }
 
+/**
+ * 
+ * la tarjeta con los datos de la orden y el aviso de si ya se puede iniciar el
+ * trabajo
+ * 
+ */
 @Composable
 private fun OrderHeader(order: ServiceOrder) {
     Card(
@@ -263,6 +303,12 @@ private fun OrderHeader(order: ServiceOrder) {
     }
 }
 
+/**
+ * 
+ * el formulario del acta de recepción. Debajo del kilometraje muestra el último
+ * registrado, para que el asesor sepa el mínimo
+ * 
+ */
 @Composable
 private fun ReceptionForm(
     order: ServiceOrder,
@@ -322,6 +368,15 @@ private fun ReceptionForm(
     }
 }
 
+/**
+ * 
+ * la parte de los daños previos: muestra los que ya están en el acta y deja marcar
+ * uno nuevo con su zona, su descripción y sus fotos
+ * 
+ * las fotos se eligen con el selector de fotos de Android, que no pide permisos.
+ * Si el daño se agrega, el formulario se limpia para marcar el siguiente
+ * 
+ */
 @Composable
 private fun DamageForm(
     damages: List<PreviousDamage>,
@@ -331,6 +386,12 @@ private fun DamageForm(
     var area by remember { mutableStateOf(VehicleArea.PARACHOQUES_DELANTERO) }
     var description by remember { mutableStateOf("") }
     var photos by remember { mutableStateOf(listOf<String>()) }
+
+    /**
+     * 
+     * abre el selector de fotos y suma las elegidas, sin repetir y hasta MAX_PHOTOS
+     * 
+     */
     val pickPhotos = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(MAX_PHOTOS),
     ) { uris -> photos = (photos + uris.map(Uri::toString)).distinct().take(MAX_PHOTOS) }
@@ -387,6 +448,12 @@ private fun DamageForm(
     }
 }
 
+/**
+ * 
+ * el formulario de la firma del cliente. El nombre empieza con el del cliente de
+ * la cita
+ * 
+ */
 @Composable
 private fun SignatureForm(
     clientName: String,
@@ -416,6 +483,11 @@ private fun SignatureForm(
     }
 }
 
+/**
+ * 
+ * el acta ya firmada, solo para leer
+ * 
+ */
 @Composable
 private fun SignedRecord(order: ServiceOrder) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -435,6 +507,11 @@ private fun SignedRecord(order: ServiceOrder) {
     }
 }
 
+/**
+ * 
+ * un daño del acta: su zona, su descripción y sus fotos
+ * 
+ */
 @Composable
 private fun DamageItem(damage: PreviousDamage) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -443,6 +520,11 @@ private fun DamageItem(damage: PreviousDamage) {
     }
 }
 
+/**
+ * 
+ * una fila de fotos que se puede deslizar de lado
+ * 
+ */
 @Composable
 private fun PhotoRow(photos: List<String>) {
     Row(
@@ -453,6 +535,11 @@ private fun PhotoRow(photos: List<String>) {
     }
 }
 
+/**
+ * 
+ * una foto en miniatura. Si no se puede abrir, muestra la palabra Foto
+ * 
+ */
 @Composable
 private fun PhotoThumbnail(uri: String) {
     val context = LocalContext.current
@@ -471,6 +558,14 @@ private fun PhotoThumbnail(uri: String) {
     }
 }
 
+/**
+ * 
+ * abre una foto en tamaño pequeño para no gastar memoria
+ * 
+ * primero lee solo sus medidas y calcula cuánto achicarla (cada paso la deja a la
+ * mitad) hasta quedar cerca de THUMBNAIL_PX. Devuelve null si no se pudo abrir
+ * 
+ */
 private fun loadThumbnail(resolver: android.content.ContentResolver, uri: Uri): Bitmap? = try {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
@@ -485,6 +580,11 @@ private fun loadThumbnail(resolver: android.content.ContentResolver, uri: Uri): 
     null
 }
 
+/**
+ * 
+ * un mensaje en el color principal si salió bien, o en rojo si es un error
+ * 
+ */
 @Composable
 private fun MessageText(message: ScreenMessage) {
     Text(
@@ -494,12 +594,33 @@ private fun MessageText(message: ScreenMessage) {
     )
 }
 
+/**
+ * 
+ * las partes de la pantalla donde puede salir un mensaje
+ * 
+ */
 private enum class Section { LLEGADA, RECEPCION, DANOS, FIRMA }
 
+/**
+ * 
+ * un mensaje para el asesor, con la parte de la pantalla a la que pertenece
+ * 
+ */
 private data class ScreenMessage(val section: Section, val text: String, val isError: Boolean = false)
 
+/**
+ * 
+ * cuántas fotos se pueden subir por daño y el tamaño (en píxeles) de las
+ * miniaturas
+ * 
+ */
 private const val MAX_PHOTOS = 5
 private const val THUMBNAIL_PX = 200
 
+/**
+ * 
+ * escribe un número con puntos de miles: 68.500
+ * 
+ */
 private fun formatNumber(value: Int): String =
     NumberFormat.getIntegerInstance(Locale.forLanguageTag("es-CO")).format(value)

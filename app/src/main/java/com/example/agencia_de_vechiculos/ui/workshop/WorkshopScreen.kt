@@ -41,7 +41,8 @@ import java.util.Locale
 
 /**
  * 
- * la pantalla de citas de taller (HU-26)
+ * la pantalla del taller: agendar citas (HU-26) y recibir los vehículos (HU-27).
+ * Arriba se elige cuál de las dos se muestra
  * 
  * el cliente escribe la placa (o la elige de los vehículos registrados), el
  * servicio, la sucursal, la fecha y el horario. Los horarios sin cupo se marcan,
@@ -69,13 +70,22 @@ fun WorkshopScreen(
     var date by rememberSaveable { mutableStateOf("2026-10-20") }
     var selectedTime by rememberSaveable { mutableStateOf(WorkshopRepository.TIME_SLOTS.first()) }
     var comments by rememberSaveable { mutableStateOf("") }
+
+    /**
+     * 
+     * true cuando se muestra la recepción de vehículos en vez del formulario para
+     * agendar
+     * 
+     */
     var showReception by rememberSaveable { mutableStateOf(false) }
+
     /**
      * 
      * el resultado del último intento de agendar
      * 
      */
     var lastResult by remember { mutableStateOf<WorkshopBookingResult?>(null) }
+
     /**
      * 
      * cambia cada vez que se intenta agendar, para que la pantalla vuelva a leer las
@@ -90,6 +100,7 @@ fun WorkshopScreen(
      * 
      */
     val vehicle = repository.registeredVehicle(plate)
+
     /**
      * 
      * las citas y los horarios libres de la sucursal y el día elegidos

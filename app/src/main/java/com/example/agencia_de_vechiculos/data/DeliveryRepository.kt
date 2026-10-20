@@ -176,6 +176,7 @@ class DeliveryRepository(
          * 
          */
         private const val NOT_SIGNED_MESSAGE = "La entrega solo se gestiona cuando el contrato de venta está firmado"
+
         /**
          * 
          * el formato que debe tener la fecha de entrega: AAAA-MM-DD

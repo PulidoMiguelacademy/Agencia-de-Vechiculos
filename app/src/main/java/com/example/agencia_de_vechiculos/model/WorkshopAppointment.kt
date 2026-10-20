@@ -56,6 +56,12 @@ data class RegisteredVehicle(
      */
     val year: Int,
 
+    /**
+     *
+     * el último kilometraje registrado del vehículo. En el taller no se acepta uno
+     * menor
+     *
+     */
     val lastMileageKm: Int,
 )
 

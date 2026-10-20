@@ -72,12 +72,14 @@ fun ContractScreen(
     deliveryRepository: DeliveryRepository = remember { DeliveryRepository(repository) },
 ) {
     val context = LocalContext.current
+
     /**
      * 
      * guarda los PDF en la carpeta contratos, dentro de los archivos privados de la app
      * 
      */
     val pdfWriter = remember { ContractPdfWriter(File(context.filesDir, "contratos")) }
+
     /**
      * 
      * la fecha de hoy como AAAA-MM-DD. Se usa como fecha de emisión del PDF y como
@@ -89,6 +91,7 @@ fun ContractScreen(
     val quotations = remember { repository.allQuotations() }
     var selectedFolio by rememberSaveable { mutableStateOf(quotations.first().folio) }
     var signedDate by rememberSaveable { mutableStateOf(today) }
+
     /**
      * 
      * cambia cada vez que se genera o se firma un contrato, para que la pantalla vuelva
@@ -97,12 +100,14 @@ fun ContractScreen(
      */
     var version by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<ScreenMessage?>(null) }
+
     /**
      * 
      * el último PDF creado de cada cotización
      * 
      */
     var pdfFiles by remember { mutableStateOf(mapOf<String, File>()) }
+
     /**
      * 
      * la cotización cuyo PDF se está mostrando, o null si no se muestra ninguno
@@ -112,6 +117,7 @@ fun ContractScreen(
 
     val quotation = quotations.first { it.folio == selectedFolio }
     val contract = remember(selectedFolio, version) { repository.contractFor(selectedFolio) }
+
     /**
      * 
      * la entrega del vehículo de la cotización elegida. Solo existe cuando el contrato
