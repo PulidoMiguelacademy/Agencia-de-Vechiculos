@@ -43,3 +43,23 @@ data class Delivery(
         }
     }
 }
+
+sealed interface ProcedureAdvanceResult {
+    data class Advanced(val delivery: Delivery, val procedure: DeliveryProcedure) : ProcedureAdvanceResult
+
+    data class InvalidData(val message: String) : ProcedureAdvanceResult
+}
+
+sealed interface DeliveryScheduleResult {
+    data class Scheduled(val delivery: Delivery) : DeliveryScheduleResult
+
+    data class PendingProcedures(val pendingProcedures: List<DeliveryProcedure>) : DeliveryScheduleResult
+
+    data class InvalidData(val message: String) : DeliveryScheduleResult
+}
+
+sealed interface DeliveryCloseResult {
+    data class Closed(val delivery: Delivery) : DeliveryCloseResult
+
+    data class InvalidData(val message: String) : DeliveryCloseResult
+}
