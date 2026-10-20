@@ -29,6 +29,7 @@ import com.example.agencia_de_vechiculos.model.DeliveryScheduleResult
 import com.example.agencia_de_vechiculos.model.DeliveryStatus
 import com.example.agencia_de_vechiculos.model.ProcedureAdvanceResult
 import com.example.agencia_de_vechiculos.model.ProcedureStatus
+import com.example.agencia_de_vechiculos.ui.common.FeedbackCard
 
 /**
  * 
@@ -81,150 +82,146 @@ fun DeliverySection(
      */
     var message by remember(folio) { mutableStateOf<Pair<String, Boolean>?>(null) }
 
-    Card(modifier = modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(
-                text = "Entrega del vehículo • ${delivery.status.label}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = "Sin revisión pre-entrega aprobada no se entrega",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            DeliveryProcedure.entries.forEach { procedure ->
-                val status = delivery.procedures[procedure] ?: ProcedureStatus.PENDIENTE
-                val canAdvance = delivery.status == DeliveryStatus.EN_TRAMITES && status != ProcedureStatus.COMPLETADO
-                val needsReference = status == ProcedureStatus.EN_PROCESO && procedure.referenceLabel != null
-
-                HorizontalDivider()
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(procedure.label, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            text = delivery.statusLabel(procedure),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (status == ProcedureStatus.COMPLETADO) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.error
-                            },
-                        )
-                        delivery.references[procedure]?.let {
-                            Text("${procedure.referenceLabel}: $it", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    if (canAdvance) {
-                        OutlinedButton(
-                            onClick = {
-                                val result = repository.advance(folio, procedure, references[procedure].orEmpty())
-                                message = when (result) {
-                                    is ProcedureAdvanceResult.Advanced ->
-                                        "${procedure.label}: ${result.delivery.statusLabel(procedure)}" to false
-                                    is ProcedureAdvanceResult.InvalidData -> result.message to true
-                                }
-                                onChange()
-                            },
-                        ) {
-                            Text(
-                                when {
-                                    status == ProcedureStatus.PENDIENTE -> "Iniciar"
-                                    procedure == DeliveryProcedure.REVISION_PRE_ENTREGA -> "Aprobar"
-                                    else -> "Completar"
-                                }
-                            )
-                        }
-                    }
-                }
-                if (canAdvance && needsReference) {
-                    OutlinedTextField(
-                        value = references[procedure].orEmpty(),
-                        onValueChange = { references = references + (procedure to it) },
-                        label = { Text(procedure.referenceLabel.orEmpty()) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-
-            HorizontalDivider()
-            when (delivery.status) {
-                DeliveryStatus.CERRADA -> Text(
-                    text = "Venta cerrada. Acta firmada por ${delivery.signedBy} el ${delivery.deliveryDate}.",
-                    color = MaterialTheme.colorScheme.primary,
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text = "Entrega del vehículo • ${delivery.status.label}",
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
-                else -> {
-                    delivery.deliveryDate?.let { Text("Entrega programada para el $it") }
-                    OutlinedTextField(
-                        value = deliveryDate,
-                        onValueChange = { deliveryDate = it },
-                        label = { Text("Fecha de entrega (AAAA-MM-DD)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedButton(
-                        onClick = {
-                            message = when (val result = repository.schedule(folio, deliveryDate, today)) {
-                                is DeliveryScheduleResult.Scheduled ->
-                                    "Entrega programada para el ${result.delivery.deliveryDate}." to false
-                                is DeliveryScheduleResult.PendingProcedures -> {
-                                    val missing = result.pendingProcedures.joinToString(", ") { it.label }
-                                    val rule = if (DeliveryProcedure.REVISION_PRE_ENTREGA in result.pendingProcedures) {
-                                        " Sin revisión pre-entrega aprobada no se entrega."
-                                    } else {
-                                        ""
-                                    }
-                                    "No se puede programar la entrega. Falta completar: $missing.$rule" to true
-                                }
-                                is DeliveryScheduleResult.InvalidData -> result.message to true
-                            }
-                            onChange()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(if (delivery.status == DeliveryStatus.PROGRAMADA) "Reprogramar entrega" else "Programar entrega")
-                    }
+                Text(
+                    text = "Sin revisión pre-entrega aprobada no se entrega",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
-                    if (delivery.status == DeliveryStatus.PROGRAMADA) {
+                DeliveryProcedure.entries.forEach { procedure ->
+                    val status = delivery.procedures[procedure] ?: ProcedureStatus.PENDIENTE
+                    val canAdvance = delivery.status == DeliveryStatus.EN_TRAMITES && status != ProcedureStatus.COMPLETADO
+                    val needsReference = status == ProcedureStatus.EN_PROCESO && procedure.referenceLabel != null
+
+                    HorizontalDivider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(procedure.label, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                text = delivery.statusLabel(procedure),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (status == ProcedureStatus.COMPLETADO) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.tertiary
+                                },
+                            )
+                            delivery.references[procedure]?.let {
+                                Text("${procedure.referenceLabel}: $it", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                        if (canAdvance) {
+                            OutlinedButton(
+                                onClick = {
+                                    val result = repository.advance(folio, procedure, references[procedure].orEmpty())
+                                    message = when (result) {
+                                        is ProcedureAdvanceResult.Advanced ->
+                                            "${procedure.label}: ${result.delivery.statusLabel(procedure)}" to false
+                                        is ProcedureAdvanceResult.InvalidData -> result.message to true
+                                    }
+                                    onChange()
+                                },
+                            ) {
+                                Text(
+                                    when {
+                                        status == ProcedureStatus.PENDIENTE -> "Iniciar"
+                                        procedure == DeliveryProcedure.REVISION_PRE_ENTREGA -> "Aprobar"
+                                        else -> "Completar"
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    if (canAdvance && needsReference) {
                         OutlinedTextField(
-                            value = signer,
-                            onValueChange = { signer = it },
-                            label = { Text("Nombre de quien firma el acta") },
+                            value = references[procedure].orEmpty(),
+                            onValueChange = { references = references + (procedure to it) },
+                            label = { Text(procedure.referenceLabel.orEmpty()) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
-                        Button(
+                    }
+                }
+
+                HorizontalDivider()
+                when (delivery.status) {
+                    DeliveryStatus.CERRADA -> Text(
+                        text = "Venta cerrada. Acta firmada por ${delivery.signedBy} el ${delivery.deliveryDate}.",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    else -> {
+                        delivery.deliveryDate?.let { Text("Entrega programada para el $it") }
+                        OutlinedTextField(
+                            value = deliveryDate,
+                            onValueChange = { deliveryDate = it },
+                            label = { Text("Fecha de entrega (AAAA-MM-DD)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedButton(
                             onClick = {
-                                message = when (val result = repository.closeSale(folio, signer, today)) {
-                                    is DeliveryCloseResult.Closed -> "Acta firmada. La venta quedó cerrada." to false
-                                    is DeliveryCloseResult.InvalidData -> result.message to true
+                                message = when (val result = repository.schedule(folio, deliveryDate, today)) {
+                                    is DeliveryScheduleResult.Scheduled ->
+                                        "Entrega programada para el ${result.delivery.deliveryDate}." to false
+                                    is DeliveryScheduleResult.PendingProcedures -> {
+                                        val missing = result.pendingProcedures.joinToString(", ") { it.label }
+                                        val rule = if (DeliveryProcedure.REVISION_PRE_ENTREGA in result.pendingProcedures) {
+                                            " Sin revisión pre-entrega aprobada no se entrega."
+                                        } else {
+                                            ""
+                                        }
+                                        "No se puede programar la entrega. Falta completar: $missing.$rule" to true
+                                    }
+                                    is DeliveryScheduleResult.InvalidData -> result.message to true
                                 }
                                 onChange()
                             },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text("Firmar acta y cerrar venta")
+                            Text(if (delivery.status == DeliveryStatus.PROGRAMADA) "Reprogramar entrega" else "Programar entrega")
+                        }
+
+                        if (delivery.status == DeliveryStatus.PROGRAMADA) {
+                            OutlinedTextField(
+                                value = signer,
+                                onValueChange = { signer = it },
+                                label = { Text("Nombre de quien firma el acta") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Button(
+                                onClick = {
+                                    message = when (val result = repository.closeSale(folio, signer, today)) {
+                                        is DeliveryCloseResult.Closed -> "Acta firmada. La venta quedó cerrada." to false
+                                        is DeliveryCloseResult.InvalidData -> result.message to true
+                                    }
+                                    onChange()
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Firmar acta y cerrar venta")
+                            }
                         }
                     }
                 }
             }
-
-            message?.let { (text, isError) ->
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                )
-            }
         }
+
+        message?.let { (text, isError) -> FeedbackCard(message = text, isError = isError) }
     }
 }

@@ -1,6 +1,5 @@
 package com.example.agencia_de_vechiculos.ui.contract
 
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
@@ -17,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -35,6 +33,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.createBitmap
 import com.example.agencia_de_vechiculos.data.ContractPdfWriter
 import com.example.agencia_de_vechiculos.data.ContractRepository
 import com.example.agencia_de_vechiculos.data.DeliveryRepository
@@ -46,6 +45,7 @@ import com.example.agencia_de_vechiculos.model.DocumentType
 import com.example.agencia_de_vechiculos.model.Quotation
 import com.example.agencia_de_vechiculos.model.QuotationStatus
 import com.example.agencia_de_vechiculos.model.SaleContract
+import com.example.agencia_de_vechiculos.ui.common.FeedbackCard
 import com.example.agencia_de_vechiculos.ui.delivery.DeliverySection
 import java.io.File
 import java.text.NumberFormat
@@ -208,11 +208,7 @@ fun ContractScreen(
 
         message?.let {
             item {
-                Text(
-                    text = it.text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (it.isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                )
+                FeedbackCard(message = it.text, isError = it.isError)
             }
         }
 
@@ -327,7 +323,7 @@ private fun QuotationCard(
                 color = if (quotation.status == QuotationStatus.ACEPTADA) {
                     MaterialTheme.colorScheme.primary
                 } else {
-                    MaterialTheme.colorScheme.error
+                    MaterialTheme.colorScheme.tertiary
                 },
             )
             Text("Cliente: ${quotation.clientName} • Doc. ${quotation.clientDocument}")
@@ -362,10 +358,7 @@ private fun QuotationCard(
  */
 @Composable
 private fun ContractCard(contract: SaleContract) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-    ) {
+    Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -404,7 +397,7 @@ private fun PdfPreview(file: File) {
         ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
             PdfRenderer(descriptor).use { renderer ->
                 renderer.openPage(0).use { page ->
-                    Bitmap.createBitmap(page.width * 2, page.height * 2, Bitmap.Config.ARGB_8888).apply {
+                    createBitmap(page.width * 2, page.height * 2).apply {
                         eraseColor(Color.WHITE)
                         page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                     }

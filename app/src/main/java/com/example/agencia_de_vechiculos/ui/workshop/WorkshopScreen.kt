@@ -14,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -35,6 +34,7 @@ import com.example.agencia_de_vechiculos.model.Branch
 import com.example.agencia_de_vechiculos.model.ServiceType
 import com.example.agencia_de_vechiculos.model.WorkshopBookingResult
 import com.example.agencia_de_vechiculos.model.WorkshopSlot
+import com.example.agencia_de_vechiculos.ui.common.FeedbackCard
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -293,15 +293,24 @@ fun WorkshopScreen(
                 }
                 items(dayAppointments.sortedBy { it.time }, key = { it.id }) { appointment ->
                     Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(12.dp)) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
                             Text(
-                                text = "${appointment.time} • ${appointment.plate} • ${appointment.clientName}",
+                                text = "${appointment.plate} • ${appointment.clientName}",
+                                style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,
                             )
-                            Text(appointment.serviceType.label, style = MaterialTheme.typography.bodySmall)
+                            Text(appointment.serviceType.label, style = MaterialTheme.typography.bodyMedium)
                             if (appointment.comments.isNotEmpty()) {
-                                Text(appointment.comments, style = MaterialTheme.typography.bodySmall)
+                                Text("Comentarios: ${appointment.comments}", style = MaterialTheme.typography.bodySmall)
                             }
+                            Text(
+                                text = "Fecha: ${appointment.date} a las ${appointment.time} • ${appointment.branch.label}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
                         }
                     }
                 }
@@ -321,54 +330,37 @@ private fun BookingResultCard(
     result: WorkshopBookingResult,
     onPickAlternative: (WorkshopSlot) -> Unit,
 ) {
-    val isConfirmed = result is WorkshopBookingResult.Confirmed
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isConfirmed) {
-                MaterialTheme.colorScheme.secondaryContainer
+    when (result) {
+        is WorkshopBookingResult.Confirmed -> FeedbackCard(
+            title = "¡Cita agendada!",
+            message = result.reminder,
+            isError = false,
+        )
+        is WorkshopBookingResult.NoCapacity -> FeedbackCard(
+            title = "Sin cupo el ${result.requested.date} a las ${result.requested.time}",
+            message = if (result.alternatives.isEmpty()) {
+                "No hay horarios libres en los próximos días en esta sucursal."
             } else {
-                MaterialTheme.colorScheme.errorContainer
+                "Selecciona uno de estos horarios libres disponibles:"
             },
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            isError = true,
         ) {
-            when (result) {
-                is WorkshopBookingResult.Confirmed -> {
-                    Text("Cita agendada", fontWeight = FontWeight.SemiBold)
-                    Text(result.reminder, style = MaterialTheme.typography.bodyMedium)
-                }
-                is WorkshopBookingResult.NoCapacity -> {
-                    Text(
-                        text = "Sin cupo el ${result.requested.date} a las ${result.requested.time}",
-                        fontWeight = FontWeight.SemiBold,
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                result.alternatives.forEach { slot ->
+                    AssistChip(
+                        onClick = { onPickAlternative(slot) },
+                        label = { Text("Reservar ${slot.date} ${slot.time}") },
                     )
-                    if (result.alternatives.isEmpty()) {
-                        Text("No hay horarios libres en los próximos días en esta sucursal.")
-                    } else {
-                        Text("Otras opciones disponibles:", style = MaterialTheme.typography.bodyMedium)
-                        Row(
-                            modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            result.alternatives.forEach { slot ->
-                                AssistChip(
-                                    onClick = { onPickAlternative(slot) },
-                                    label = { Text("${slot.date} ${slot.time}") },
-                                )
-                            }
-                        }
-                    }
                 }
-                is WorkshopBookingResult.UnregisteredVehicle -> Text(
-                    text = "La placa ${result.plate} no está registrada. Solo se agendan vehículos registrados.",
-                    fontWeight = FontWeight.SemiBold,
-                )
-                is WorkshopBookingResult.InvalidData -> Text(result.message, fontWeight = FontWeight.SemiBold)
             }
         }
+        is WorkshopBookingResult.UnregisteredVehicle -> FeedbackCard(
+            message = "La placa ${result.plate} no está registrada. Solo se agendan vehículos registrados.",
+            isError = true,
+        )
+        is WorkshopBookingResult.InvalidData -> FeedbackCard(message = result.message, isError = true)
     }
 }

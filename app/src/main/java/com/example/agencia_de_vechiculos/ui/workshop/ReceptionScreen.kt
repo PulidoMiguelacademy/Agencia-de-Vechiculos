@@ -18,11 +18,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.example.agencia_de_vechiculos.data.ServiceOrderRepository
 import com.example.agencia_de_vechiculos.model.FuelLevel
 import com.example.agencia_de_vechiculos.model.PreviousDamage
@@ -52,6 +53,7 @@ import com.example.agencia_de_vechiculos.model.ServiceOrderOpenResult
 import com.example.agencia_de_vechiculos.model.ServiceOrderSignResult
 import com.example.agencia_de_vechiculos.model.ServiceOrderStatus
 import com.example.agencia_de_vechiculos.model.VehicleArea
+import com.example.agencia_de_vechiculos.ui.common.FeedbackCard
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -193,7 +195,7 @@ fun ReceptionScreen(
         }
 
         message?.takeIf { it.section == Section.LLEGADA || (it.section == Section.FIRMA && order?.canStartWork == true) }?.let {
-            item { MessageText(it) }
+            item { FeedbackCard(message = it.text, isError = it.isError) }
         }
 
         if (order != null) {
@@ -205,7 +207,6 @@ fun ReceptionScreen(
                     ReceptionForm(
                         order = order,
                         lastMileageKm = repository.lastMileage(order.plate, exceptOrderId = order.id),
-                        message = message?.takeIf { it.section == Section.RECEPCION },
                         onSave = { mileage, fuel, belongings, request ->
                             message = when (val result = repository.recordReception(order.id, mileage, fuel, belongings, request)) {
                                 is ReceptionResult.Saved ->
@@ -223,10 +224,10 @@ fun ReceptionScreen(
                         },
                     )
                 }
+                sectionMessage(message, Section.RECEPCION)
                 item {
                     DamageForm(
                         damages = order.damages,
-                        message = message?.takeIf { it.section == Section.DANOS },
                         onAdd = { area, description, photos ->
                             val result = repository.addDamage(order.id, area, description, photos)
                             message = when (result) {
@@ -240,10 +241,10 @@ fun ReceptionScreen(
                         },
                     )
                 }
+                sectionMessage(message, Section.DANOS)
                 item {
                     SignatureForm(
                         clientName = order.clientName,
-                        message = message?.takeIf { it.section == Section.FIRMA },
                         onSign = { signer ->
                             message = when (val result = repository.sign(order.id, signer)) {
                                 is ServiceOrderSignResult.Signed -> ScreenMessage(
@@ -262,6 +263,7 @@ fun ReceptionScreen(
                         },
                     )
                 }
+                sectionMessage(message, Section.FIRMA)
             } else {
                 item {
                     SignedRecord(order)
@@ -279,10 +281,7 @@ fun ReceptionScreen(
  */
 @Composable
 private fun OrderHeader(order: ServiceOrder) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-    ) {
+    Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -297,7 +296,7 @@ private fun OrderHeader(order: ServiceOrder) {
             Text(
                 text = if (order.canStartWork) "Ya se puede iniciar el trabajo" else "Sin firma del cliente no se inicia el trabajo",
                 style = MaterialTheme.typography.bodySmall,
-                color = if (order.canStartWork) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                color = if (order.canStartWork) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
             )
         }
     }
@@ -313,7 +312,6 @@ private fun OrderHeader(order: ServiceOrder) {
 private fun ReceptionForm(
     order: ServiceOrder,
     lastMileageKm: Int,
-    message: ScreenMessage?,
     onSave: (Int?, FuelLevel?, String, String) -> Unit,
 ) {
     var mileage by remember(order.id) { mutableStateOf(order.mileageKm?.toString().orEmpty()) }
@@ -363,7 +361,6 @@ private fun ReceptionForm(
             ) {
                 Text("Guardar recepción")
             }
-            message?.let { MessageText(it) }
         }
     }
 }
@@ -380,7 +377,6 @@ private fun ReceptionForm(
 @Composable
 private fun DamageForm(
     damages: List<PreviousDamage>,
-    message: ScreenMessage?,
     onAdd: (VehicleArea, String, List<String>) -> Boolean,
 ) {
     var area by remember { mutableStateOf(VehicleArea.PARACHOQUES_DELANTERO) }
@@ -443,7 +439,6 @@ private fun DamageForm(
             ) {
                 Text("Agregar daño al acta")
             }
-            message?.let { MessageText(it) }
         }
     }
 }
@@ -457,7 +452,6 @@ private fun DamageForm(
 @Composable
 private fun SignatureForm(
     clientName: String,
-    message: ScreenMessage?,
     onSign: (String) -> Unit,
 ) {
     var signer by remember { mutableStateOf(clientName) }
@@ -478,7 +472,6 @@ private fun SignatureForm(
             Button(onClick = { onSign(signer) }, modifier = Modifier.fillMaxWidth()) {
                 Text("Firmar acta de recepción")
             }
-            message?.let { MessageText(it) }
         }
     }
 }
@@ -543,7 +536,7 @@ private fun PhotoRow(photos: List<String>) {
 @Composable
 private fun PhotoThumbnail(uri: String) {
     val context = LocalContext.current
-    val bitmap = remember(uri) { loadThumbnail(context.contentResolver, Uri.parse(uri)) }
+    val bitmap = remember(uri) { loadThumbnail(context.contentResolver, uri.toUri()) }
     Box(modifier = Modifier.size(72.dp), contentAlignment = Alignment.Center) {
         if (bitmap != null) {
             Image(
@@ -585,13 +578,10 @@ private fun loadThumbnail(resolver: android.content.ContentResolver, uri: Uri): 
  * un mensaje en el color principal si salió bien, o en rojo si es un error
  * 
  */
-@Composable
-private fun MessageText(message: ScreenMessage) {
-    Text(
-        text = message.text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = if (message.isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-    )
+private fun LazyListScope.sectionMessage(message: ScreenMessage?, section: Section) {
+    if (message?.section == section) {
+        item { FeedbackCard(message = message.text, isError = message.isError) }
+    }
 }
 
 /**
