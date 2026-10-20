@@ -73,3 +73,13 @@ data class SaleContract(
     val balance: Long
         get() = finalPrice - deposit
 }
+
+sealed interface ContractGenerationResult {
+    data class Generated(val contract: SaleContract) : ContractGenerationResult
+
+    data class IncompleteFile(val missingDocuments: List<DocumentType>) : ContractGenerationResult
+
+    data class AlreadyGenerated(val contract: SaleContract) : ContractGenerationResult
+
+    data class InvalidData(val message: String) : ContractGenerationResult
+}
