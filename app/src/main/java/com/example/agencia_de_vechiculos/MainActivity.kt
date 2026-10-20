@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,10 +26,12 @@ import androidx.compose.ui.unit.dp
 import com.example.agencia_de_vechiculos.data.ContractRepository
 import com.example.agencia_de_vechiculos.data.TestDriveRepository
 import com.example.agencia_de_vechiculos.data.VehicleRepository
+import com.example.agencia_de_vechiculos.data.WorkshopRepository
 import com.example.agencia_de_vechiculos.ui.catalog.CatalogScreen
 import com.example.agencia_de_vechiculos.ui.contract.ContractScreen
 import com.example.agencia_de_vechiculos.ui.testdrive.TestDriveScreen
 import com.example.agencia_de_vechiculos.ui.theme.AgenciadevechiculosTheme
+import com.example.agencia_de_vechiculos.ui.workshop.WorkshopScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,6 +44,7 @@ class MainActivity : ComponentActivity() {
                 val testDriveRepository = remember { TestDriveRepository() }
                 val vehicleRepository = remember { VehicleRepository() }
                 val contractRepository = remember { ContractRepository(vehicleRepository = vehicleRepository) }
+                val workshopRepository = remember { WorkshopRepository() }
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Column(
@@ -53,17 +57,18 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxWidth()
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                         ) {
-                            listOf("Catálogo", "Prueba de manejo", "Contratos").forEachIndexed { index, label ->
+                            listOf("Catálogo", "Pruebas", "Contratos", "Taller").forEachIndexed { index, label ->
                                 val tabModifier = Modifier
                                     .weight(1f)
-                                    .padding(horizontal = 4.dp)
+                                    .padding(horizontal = 2.dp)
+                                val tabPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                                 if (selectedTab == index) {
-                                    Button(onClick = { selectedTab = index }, modifier = tabModifier) {
-                                        Text(label, textAlign = TextAlign.Center)
+                                    Button(onClick = { selectedTab = index }, modifier = tabModifier, contentPadding = tabPadding) {
+                                        Text(label, textAlign = TextAlign.Center, maxLines = 1)
                                     }
                                 } else {
-                                    OutlinedButton(onClick = { selectedTab = index }, modifier = tabModifier) {
-                                        Text(label, textAlign = TextAlign.Center)
+                                    OutlinedButton(onClick = { selectedTab = index }, modifier = tabModifier, contentPadding = tabPadding) {
+                                        Text(label, textAlign = TextAlign.Center, maxLines = 1)
                                     }
                                 }
                             }
@@ -82,10 +87,11 @@ class MainActivity : ComponentActivity() {
                                 repository = testDriveRepository,
                                 onBackToCatalog = { selectedTab = 0 },
                             )
-                            else -> ContractScreen(
+                            2 -> ContractScreen(
                                 vehicleRepository = vehicleRepository,
                                 repository = contractRepository,
                             )
+                            else -> WorkshopScreen(repository = workshopRepository)
                         }
                     }
                 }
