@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.agencia_de_vechiculos.data.ServiceOrderRepository
 import com.example.agencia_de_vechiculos.data.WorkshopRepository
 import com.example.agencia_de_vechiculos.model.Branch
 import com.example.agencia_de_vechiculos.model.ServiceType
@@ -53,6 +54,7 @@ import java.util.Locale
 fun WorkshopScreen(
     modifier: Modifier = Modifier,
     repository: WorkshopRepository = remember { WorkshopRepository() },
+    serviceOrderRepository: ServiceOrderRepository = remember { ServiceOrderRepository(repository) },
 ) {
     /**
      * 
@@ -67,6 +69,7 @@ fun WorkshopScreen(
     var date by rememberSaveable { mutableStateOf("2026-10-20") }
     var selectedTime by rememberSaveable { mutableStateOf(WorkshopRepository.TIME_SLOTS.first()) }
     var comments by rememberSaveable { mutableStateOf("") }
+    var showReception by rememberSaveable { mutableStateOf(false) }
     /**
      * 
      * el resultado del último intento de agendar
@@ -108,171 +111,187 @@ fun WorkshopScreen(
         version++
     }
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            Text(
-                text = "Citas de taller",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = "Cupo de ${WorkshopRepository.DAILY_CAPACITY} citas por día en cada sucursal • Solo vehículos registrados",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+    Column(modifier = modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterChip(selected = !showReception, onClick = { showReception = false }, label = { Text("Agendar cita") })
+            FilterChip(selected = showReception, onClick = { showReception = true }, label = { Text("Recepción") })
         }
 
-        item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
+        if (showReception) {
+            ReceptionScreen(repository = serviceOrderRepository, today = today)
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                item {
                     Text(
-                        text = "Agendar cita de servicio",
+                        text = "Citas de taller",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "Cupo de ${WorkshopRepository.DAILY_CAPACITY} citas por día en cada sucursal • Solo vehículos registrados",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                item {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Text(
+                                text = "Agendar cita de servicio",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+
+                            OutlinedTextField(
+                                value = plate,
+                                onValueChange = { plate = it.uppercase().take(8) },
+                                label = { Text("Placa del vehículo") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            when {
+                                vehicle != null -> Text(
+                                    text = "${vehicle.clientName} • ${vehicle.brand} ${vehicle.model} ${vehicle.year}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                plate.isNotBlank() -> Text(
+                                    text = "Esta placa no está registrada",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                repository.allRegisteredVehicles().forEach {
+                                    AssistChip(
+                                        onClick = { plate = it.plate },
+                                        label = { Text("${it.plate} • ${it.brand} ${it.model}") },
+                                    )
+                                }
+                            }
+
+                            Text("Tipo de servicio", style = MaterialTheme.typography.labelLarge)
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                ServiceType.entries.forEach { service ->
+                                    FilterChip(
+                                        selected = selectedService == service,
+                                        onClick = { selectedService = service },
+                                        label = { Text(service.label) },
+                                    )
+                                }
+                            }
+
+                            Text("Sucursal", style = MaterialTheme.typography.labelLarge)
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Branch.entries.forEach { branch ->
+                                    FilterChip(
+                                        selected = selectedBranch == branch,
+                                        onClick = { selectedBranch = branch },
+                                        label = { Text(branch.label) },
+                                    )
+                                }
+                            }
+
+                            OutlinedTextField(
+                                value = date,
+                                onValueChange = { date = it },
+                                label = { Text("Fecha de la cita (AAAA-MM-DD)") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                listOf("2026-10-20", "2026-10-21", "2026-10-22").forEach { quickDate ->
+                                    AssistChip(onClick = { date = quickDate }, label = { Text(quickDate) })
+                                }
+                            }
+
+                            Text(
+                                text = "Horario • ${dayAppointments.size} de ${WorkshopRepository.DAILY_CAPACITY} citas ese día",
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                WorkshopRepository.TIME_SLOTS.forEach { slot ->
+                                    FilterChip(
+                                        selected = selectedTime == slot,
+                                        onClick = { selectedTime = slot },
+                                        label = { Text(if (slot in availableSlots) slot else "$slot • Sin cupo") },
+                                    )
+                                }
+                            }
+
+                            OutlinedTextField(
+                                value = comments,
+                                onValueChange = { comments = it },
+                                label = { Text("Comentarios (opcional)") },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+
+                            Button(
+                                onClick = { book(WorkshopSlot(date, selectedTime)) },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Confirmar cita")
+                            }
+                        }
+                    }
+                }
+
+                lastResult?.let { result ->
+                    item {
+                        BookingResultCard(result = result, onPickAlternative = { book(it) })
+                    }
+                }
+
+                item {
+                    Text(
+                        text = "Citas del ${date.trim()} en ${selectedBranch.label}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
-
-                    OutlinedTextField(
-                        value = plate,
-                        onValueChange = { plate = it.uppercase().take(8) },
-                        label = { Text("Placa del vehículo") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    when {
-                        vehicle != null -> Text(
-                            text = "${vehicle.clientName} • ${vehicle.brand} ${vehicle.model} ${vehicle.year}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        plate.isNotBlank() -> Text(
-                            text = "Esta placa no está registrada",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        repository.allRegisteredVehicles().forEach {
-                            AssistChip(
-                                onClick = { plate = it.plate },
-                                label = { Text("${it.plate} • ${it.brand} ${it.model}") },
-                            )
-                        }
-                    }
-
-                    Text("Tipo de servicio", style = MaterialTheme.typography.labelLarge)
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        ServiceType.entries.forEach { service ->
-                            FilterChip(
-                                selected = selectedService == service,
-                                onClick = { selectedService = service },
-                                label = { Text(service.label) },
-                            )
-                        }
-                    }
-
-                    Text("Sucursal", style = MaterialTheme.typography.labelLarge)
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Branch.entries.forEach { branch ->
-                            FilterChip(
-                                selected = selectedBranch == branch,
-                                onClick = { selectedBranch = branch },
-                                label = { Text(branch.label) },
-                            )
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = date,
-                        onValueChange = { date = it },
-                        label = { Text("Fecha de la cita (AAAA-MM-DD)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        listOf("2026-10-20", "2026-10-21", "2026-10-22").forEach { quickDate ->
-                            AssistChip(onClick = { date = quickDate }, label = { Text(quickDate) })
-                        }
-                    }
-
-                    Text(
-                        text = "Horario • ${dayAppointments.size} de ${WorkshopRepository.DAILY_CAPACITY} citas ese día",
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        WorkshopRepository.TIME_SLOTS.forEach { slot ->
-                            FilterChip(
-                                selected = selectedTime == slot,
-                                onClick = { selectedTime = slot },
-                                label = { Text(if (slot in availableSlots) slot else "$slot • Sin cupo") },
-                            )
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = comments,
-                        onValueChange = { comments = it },
-                        label = { Text("Comentarios (opcional)") },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    Button(
-                        onClick = { book(WorkshopSlot(date, selectedTime)) },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Confirmar cita")
+                    if (dayAppointments.isEmpty()) {
+                        Text("No hay citas agendadas ese día.", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
-            }
-        }
-
-        lastResult?.let { result ->
-            item {
-                BookingResultCard(result = result, onPickAlternative = { book(it) })
-            }
-        }
-
-        item {
-            Text(
-                text = "Citas del ${date.trim()} en ${selectedBranch.label}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            if (dayAppointments.isEmpty()) {
-                Text("No hay citas agendadas ese día.", style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-        items(dayAppointments.sortedBy { it.time }, key = { it.id }) { appointment ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "${appointment.time} • ${appointment.plate} • ${appointment.clientName}",
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(appointment.serviceType.label, style = MaterialTheme.typography.bodySmall)
-                    if (appointment.comments.isNotEmpty()) {
-                        Text(appointment.comments, style = MaterialTheme.typography.bodySmall)
+                items(dayAppointments.sortedBy { it.time }, key = { it.id }) { appointment ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "${appointment.time} • ${appointment.plate} • ${appointment.clientName}",
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(appointment.serviceType.label, style = MaterialTheme.typography.bodySmall)
+                            if (appointment.comments.isNotEmpty()) {
+                                Text(appointment.comments, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
                     }
                 }
             }
