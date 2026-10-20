@@ -1,6 +1,8 @@
 package com.example.agencia_de_vechiculos.data
 
 import com.example.agencia_de_vechiculos.model.ContractGenerationResult
+import com.example.agencia_de_vechiculos.model.ContractSignResult
+import com.example.agencia_de_vechiculos.model.ContractStatus
 import com.example.agencia_de_vechiculos.model.CustomerFile
 import com.example.agencia_de_vechiculos.model.DocumentStatus
 import com.example.agencia_de_vechiculos.model.DocumentType
@@ -9,14 +11,13 @@ import com.example.agencia_de_vechiculos.model.Quotation
 import com.example.agencia_de_vechiculos.model.QuotationStatus
 import com.example.agencia_de_vechiculos.model.Reservation
 import com.example.agencia_de_vechiculos.model.SaleContract
-import com.example.agencia_de_vechiculos.model.Vehicle
 import com.example.agencia_de_vechiculos.model.VehicleStatus
 
 class ContractRepository(
     private val quotations: List<Quotation> = sampleQuotations,
     private val customerFiles: List<CustomerFile> = sampleCustomerFiles,
     private val reservations: List<Reservation> = sampleReservations,
-    private val vehicles: List<Vehicle> = sampleVehicles,
+    private val vehicleRepository: VehicleRepository = VehicleRepository(),
 ) {
     private val contracts = mutableListOf<SaleContract>()
     private var nextId = 1
@@ -54,7 +55,7 @@ class ContractRepository(
             return ContractGenerationResult.IncompleteFile(customerFile.missingDocuments)
         }
 
-        val vehicle = vehicles.firstOrNull { it.id == quotation.vehicleId }
+        val vehicle = vehicleRepository.vehicleById(quotation.vehicleId)
             ?: return ContractGenerationResult.InvalidData("El vehículo de la cotización no existe")
         if (vehicle.status == VehicleStatus.VENDIDO) {
             return ContractGenerationResult.InvalidData("El vehículo ${vehicle.brand} ${vehicle.model} ya fue vendido")
@@ -75,6 +76,34 @@ class ContractRepository(
         )
         contracts.add(contract)
         return ContractGenerationResult.Generated(contract)
+    }
+
+    fun registerSigned(quotationFolio: String, signedDate: String): ContractSignResult {
+        val index = contracts.indexOfFirst { it.quotationFolio == quotationFolio.trim() }
+        if (index == -1) {
+            return ContractSignResult.InvalidData("Primero debes generar el contrato de la cotización")
+        }
+
+        val contract = contracts[index]
+        if (contract.status == ContractStatus.FIRMADO) {
+            return ContractSignResult.InvalidData("El contrato ya fue registrado como firmado el ${contract.signedDate}")
+        }
+
+        val cleanDate = signedDate.trim()
+        if (!DATE_REGEX.matches(cleanDate)) {
+            return ContractSignResult.InvalidData("Ingresa la fecha de firma en formato AAAA-MM-DD")
+        }
+
+        val vehicle = vehicleRepository.markAsSold(contract.vehicleId)
+            ?: return ContractSignResult.InvalidData("El vehículo del contrato no existe")
+
+        val signed = contract.copy(status = ContractStatus.FIRMADO, signedDate = cleanDate)
+        contracts[index] = signed
+        return ContractSignResult.Signed(signed, vehicle)
+    }
+
+    companion object {
+        private val DATE_REGEX = Regex("^\\d{4}-\\d{2}-\\d{2}$")
     }
 }
 

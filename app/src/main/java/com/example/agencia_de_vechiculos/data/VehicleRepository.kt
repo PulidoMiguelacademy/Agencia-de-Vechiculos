@@ -24,7 +24,17 @@ data class CatalogPage(
     val hasNext get() = page < totalPages - 1
 }
 
-class VehicleRepository(private val vehicles: List<Vehicle> = sampleVehicles) {
+class VehicleRepository(initialVehicles: List<Vehicle> = sampleVehicles) {
+    private val vehicles = initialVehicles.toMutableList()
+
+    fun vehicleById(id: Int): Vehicle? = vehicles.firstOrNull { it.id == id }
+
+    fun markAsSold(id: Int): Vehicle? {
+        val index = vehicles.indexOfFirst { it.id == id }
+        if (index == -1) return null
+        vehicles[index] = vehicles[index].copy(status = VENDIDO)
+        return vehicles[index]
+    }
 
     /** Regla HU-04: solo se muestran vehículos "Disponibles" o "Reservados". */
     fun catalog(filter: VehicleFilter = VehicleFilter()): List<Vehicle> =

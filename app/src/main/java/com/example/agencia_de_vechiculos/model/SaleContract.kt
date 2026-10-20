@@ -83,3 +83,9 @@ sealed interface ContractGenerationResult {
 
     data class InvalidData(val message: String) : ContractGenerationResult
 }
+
+sealed interface ContractSignResult {
+    data class Signed(val contract: SaleContract, val vehicle: Vehicle) : ContractSignResult
+
+    data class InvalidData(val message: String) : ContractSignResult
+}
