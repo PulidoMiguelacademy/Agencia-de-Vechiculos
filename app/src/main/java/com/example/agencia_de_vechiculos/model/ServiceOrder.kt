@@ -58,3 +58,27 @@ data class ServiceOrder(
     val canStartWork: Boolean
         get() = status == ServiceOrderStatus.EN_DIAGNOSTICO
 }
+
+sealed interface ServiceOrderOpenResult {
+    data class Opened(val order: ServiceOrder) : ServiceOrderOpenResult
+
+    data class AlreadyOpened(val order: ServiceOrder) : ServiceOrderOpenResult
+
+    data class InvalidData(val message: String) : ServiceOrderOpenResult
+}
+
+sealed interface ReceptionResult {
+    data class Saved(val order: ServiceOrder) : ReceptionResult
+
+    data class MileageBelowLast(val lastMileageKm: Int) : ReceptionResult
+
+    data class InvalidData(val message: String) : ReceptionResult
+}
+
+sealed interface ServiceOrderSignResult {
+    data class Signed(val order: ServiceOrder) : ServiceOrderSignResult
+
+    data class IncompleteRecord(val missingFields: List<String>) : ServiceOrderSignResult
+
+    data class InvalidData(val message: String) : ServiceOrderSignResult
+}
