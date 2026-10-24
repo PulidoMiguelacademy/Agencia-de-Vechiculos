@@ -80,6 +80,20 @@ data class Quotation(
      *
      */
     val status: QuotationStatus,
+
+    /**
+     *
+     * la sucursal o sede donde se realiza la cotización
+     *
+     */
+    val branch: Branch = Branch.NORTE,
+
+    /**
+     *
+     * el nombre del asesor comercial encargado
+     *
+     */
+    val advisorName: String = "Carlos Mendoza",
 )
 
 /**
@@ -282,6 +296,20 @@ data class SaleContract(
      *
      */
     val signedDate: String? = null,
+
+    /**
+     *
+     * la sucursal o sede donde se atiende la venta
+     *
+     */
+    val branch: Branch = Branch.NORTE,
+
+    /**
+     *
+     * el asesor comercial a cargo
+     *
+     */
+    val advisorName: String = "Carlos Mendoza",
 ) {
     /**
      *

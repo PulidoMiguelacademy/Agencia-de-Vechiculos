@@ -20,13 +20,14 @@ import com.example.agencia_de_vechiculos.model.ProcedureStatus
  */
 class DeliveryRepository(
     private val contractRepository: ContractRepository = ContractRepository(),
+    initialDeliveries: Map<String, Delivery> = defaultSampleDeliveries,
 ) {
     /**
      * 
      * las entregas abiertas, buscadas por el folio de la cotización
      * 
      */
-    private val deliveries = mutableMapOf<String, Delivery>()
+    private val deliveries = initialDeliveries.toMutableMap()
 
     /**
      * 
@@ -185,3 +186,54 @@ class DeliveryRepository(
         private val DATE_REGEX = Regex("^\\d{4}-\\d{2}-\\d{2}$")
     }
 }
+
+/**
+ * 
+ * entregas de ejemplo para tener datos reales en el dashboard
+ * 
+ */
+val defaultSampleDeliveries = mapOf(
+    "COT-0001" to Delivery(
+        quotationFolio = "COT-0001",
+        procedures = DeliveryProcedure.entries.associateWith { ProcedureStatus.COMPLETADO },
+        references = mapOf(
+            DeliveryProcedure.FACTURA to "FAC-1001",
+            DeliveryProcedure.PLACAS to "ABC-123",
+            DeliveryProcedure.SEGURO to "POL-9901",
+        ),
+        deliveryDate = "2026-10-15",
+        signedBy = "Carlos Pérez",
+        status = DeliveryStatus.CERRADA,
+    ),
+    "COT-0003" to Delivery(
+        quotationFolio = "COT-0003",
+        procedures = DeliveryProcedure.entries.associateWith { ProcedureStatus.COMPLETADO },
+        references = mapOf(
+            DeliveryProcedure.FACTURA to "FAC-1003",
+            DeliveryProcedure.PLACAS to "GHI-789",
+            DeliveryProcedure.SEGURO to "POL-9903",
+        ),
+        deliveryDate = "2026-10-18",
+        signedBy = "Andrés Ramírez",
+        status = DeliveryStatus.CERRADA,
+    ),
+    "COT-0005" to Delivery(
+        quotationFolio = "COT-0005",
+        procedures = DeliveryProcedure.entries.associateWith { ProcedureStatus.COMPLETADO },
+        references = mapOf(
+            DeliveryProcedure.FACTURA to "FAC-1005",
+            DeliveryProcedure.PLACAS to "MNO-345",
+            DeliveryProcedure.SEGURO to "POL-9905",
+        ),
+        deliveryDate = "2026-09-25",
+        signedBy = "Fernando Silva",
+        status = DeliveryStatus.CERRADA,
+    ),
+    "COT-0002" to Delivery(
+        quotationFolio = "COT-0002",
+        procedures = DeliveryProcedure.entries.associateWith { ProcedureStatus.PENDIENTE },
+        deliveryDate = "2026-10-28",
+        signedBy = null,
+        status = DeliveryStatus.EN_TRAMITES,
+    ),
+)
