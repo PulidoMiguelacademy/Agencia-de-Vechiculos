@@ -28,12 +28,14 @@ import com.example.agencia_de_vechiculos.data.DeliveryRepository
 import com.example.agencia_de_vechiculos.data.SalesDashboardRepository
 import com.example.agencia_de_vechiculos.data.ServiceOrderRepository
 import com.example.agencia_de_vechiculos.data.TestDriveRepository
+import com.example.agencia_de_vechiculos.data.UserRepository
 import com.example.agencia_de_vechiculos.data.VehicleRepository
 import com.example.agencia_de_vechiculos.data.WorkshopRepository
 import com.example.agencia_de_vechiculos.ui.catalog.CatalogScreen
 import com.example.agencia_de_vechiculos.ui.contract.ContractScreen
 import com.example.agencia_de_vechiculos.ui.dashboard.SalesDashboardScreen
 import com.example.agencia_de_vechiculos.ui.testdrive.TestDriveScreen
+import com.example.agencia_de_vechiculos.ui.user.UserManagementScreen
 import com.example.agencia_de_vechiculos.ui.theme.AgenciadevechiculosTheme
 import com.example.agencia_de_vechiculos.ui.workshop.WorkshopScreen
 
@@ -43,7 +45,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AgenciadevechiculosTheme {
-                var selectedTab by rememberSaveable { mutableIntStateOf(4) }
+                var selectedTab by rememberSaveable { mutableIntStateOf(5) }
                 var selectedVehicleId by rememberSaveable { mutableStateOf<Int?>(null) }
                 val testDriveRepository = remember { TestDriveRepository() }
                 val vehicleRepository = remember { VehicleRepository() }
@@ -58,6 +60,7 @@ class MainActivity : ComponentActivity() {
                         vehicleRepository = vehicleRepository,
                     )
                 }
+                val userRepository = remember { UserRepository() }
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Column(
@@ -68,13 +71,13 @@ class MainActivity : ComponentActivity() {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                                .padding(horizontal = 4.dp, vertical = 8.dp),
                         ) {
-                            listOf("Catálogo", "Pruebas", "Contratos", "Taller", "Dashboard").forEachIndexed { index, label ->
+                            listOf("Catálogo", "Pruebas", "Contratos", "Taller", "Dashboard", "Usuarios").forEachIndexed { index, label ->
                                 val tabModifier = Modifier
                                     .weight(1f)
                                     .padding(horizontal = 1.dp)
-                                val tabPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp)
+                                val tabPadding = PaddingValues(horizontal = 1.dp, vertical = 8.dp)
                                 if (selectedTab == index) {
                                     Button(onClick = { selectedTab = index }, modifier = tabModifier, contentPadding = tabPadding) {
                                         Text(label, textAlign = TextAlign.Center, maxLines = 1)
@@ -109,11 +112,14 @@ class MainActivity : ComponentActivity() {
                                 repository = workshopRepository,
                                 serviceOrderRepository = serviceOrderRepository,
                             )
-                            else -> SalesDashboardScreen(
+                            4 -> SalesDashboardScreen(
                                 contractRepository = contractRepository,
                                 deliveryRepository = deliveryRepository,
                                 vehicleRepository = vehicleRepository,
                                 repository = salesDashboardRepository,
+                            )
+                            else -> UserManagementScreen(
+                                repository = userRepository,
                             )
                         }
                     }
