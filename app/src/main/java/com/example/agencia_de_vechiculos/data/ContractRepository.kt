@@ -1,5 +1,6 @@
 package com.example.agencia_de_vechiculos.data
 
+import com.example.agencia_de_vechiculos.model.Branch
 import com.example.agencia_de_vechiculos.model.ContractGenerationResult
 import com.example.agencia_de_vechiculos.model.ContractSignResult
 import com.example.agencia_de_vechiculos.model.ContractStatus
@@ -29,20 +30,21 @@ class ContractRepository(
     private val customerFiles: List<CustomerFile> = sampleCustomerFiles,
     private val reservations: List<Reservation> = sampleReservations,
     private val vehicleRepository: VehicleRepository = VehicleRepository(),
+    initialContracts: List<SaleContract> = defaultSampleContracts,
 ) {
     /**
      * 
      * los contratos que ya se generaron
      * 
      */
-    private val contracts = mutableListOf<SaleContract>()
+    private val contracts = initialContracts.toMutableList()
 
     /**
      * 
      * el número que le toca al próximo contrato
      * 
      */
-    private var nextId = 1
+    private var nextId = (contracts.maxOfOrNull { it.id } ?: 0) + 1
 
     /**
      * 
@@ -131,6 +133,8 @@ class ContractRepository(
             finalPrice = quotation.finalPrice,
             deposit = deposit,
             paymentMethod = quotation.paymentMethod,
+            branch = quotation.branch,
+            advisorName = quotation.advisorName,
         )
         contracts.add(contract)
         return ContractGenerationResult.Generated(contract)
@@ -181,8 +185,7 @@ class ContractRepository(
 
 /**
  * 
- * cotizaciones de ejemplo, una para cada caso: lista para firmar, con el expediente
- * incompleto, sin reserva y sin aceptar
+ * cotizaciones de ejemplo con sucursal y asesor asignados
  * 
  */
 val sampleQuotations = listOf(
@@ -194,6 +197,8 @@ val sampleQuotations = listOf(
         finalPrice = 59_500_000,
         paymentMethod = PaymentMethod.CREDITO,
         status = QuotationStatus.ACEPTADA,
+        branch = Branch.NORTE,
+        advisorName = "Carlos Mendoza",
     ),
     Quotation(
         folio = "COT-0002",
@@ -203,6 +208,8 @@ val sampleQuotations = listOf(
         finalPrice = 185_000_000,
         paymentMethod = PaymentMethod.CONTADO,
         status = QuotationStatus.ACEPTADA,
+        branch = Branch.CENTRO,
+        advisorName = "Ana Lucía Martínez",
     ),
     Quotation(
         folio = "COT-0003",
@@ -212,6 +219,8 @@ val sampleQuotations = listOf(
         finalPrice = 140_000_000,
         paymentMethod = PaymentMethod.TRANSFERENCIA,
         status = QuotationStatus.ACEPTADA,
+        branch = Branch.SUR,
+        advisorName = "Roberto Gómez",
     ),
     Quotation(
         folio = "COT-0004",
@@ -221,6 +230,87 @@ val sampleQuotations = listOf(
         finalPrice = 133_000_000,
         paymentMethod = PaymentMethod.CREDITO,
         status = QuotationStatus.EMITIDA,
+        branch = Branch.NORTE,
+        advisorName = "Carlos Mendoza",
+    ),
+    Quotation(
+        folio = "COT-0005",
+        clientName = "Fernando Silva",
+        clientDocument = "1055566778",
+        vehicleId = 1,
+        finalPrice = 95_000_000,
+        paymentMethod = PaymentMethod.CONTADO,
+        status = QuotationStatus.ACEPTADA,
+        branch = Branch.CENTRO,
+        advisorName = "Ana Lucía Martínez",
+    ),
+)
+
+/**
+ * 
+ * contratos de ejemplo ya generados y firmados para el dashboard
+ * 
+ */
+val defaultSampleContracts = listOf(
+    SaleContract(
+        id = 1,
+        quotationFolio = "COT-0001",
+        clientName = "Carlos Pérez",
+        clientDocument = "1012345678",
+        vehicleId = 4,
+        vin = "9BWCA111111111111",
+        finalPrice = 59_500_000,
+        deposit = 5_000_000,
+        paymentMethod = PaymentMethod.CREDITO,
+        status = ContractStatus.FIRMADO,
+        signedDate = "2026-10-10",
+        branch = Branch.NORTE,
+        advisorName = "Carlos Mendoza",
+    ),
+    SaleContract(
+        id = 2,
+        quotationFolio = "COT-0002",
+        clientName = "Laura Gómez",
+        clientDocument = "52345678",
+        vehicleId = 9,
+        vin = "3N1AB111111111111",
+        finalPrice = 185_000_000,
+        deposit = 10_000_000,
+        paymentMethod = PaymentMethod.CONTADO,
+        status = ContractStatus.FIRMADO,
+        signedDate = "2026-10-14",
+        branch = Branch.CENTRO,
+        advisorName = "Ana Lucía Martínez",
+    ),
+    SaleContract(
+        id = 3,
+        quotationFolio = "COT-0003",
+        clientName = "Andrés Ramírez",
+        clientDocument = "1098765432",
+        vehicleId = 2,
+        vin = "8APCA111111111111",
+        finalPrice = 140_000_000,
+        deposit = 0,
+        paymentMethod = PaymentMethod.TRANSFERENCIA,
+        status = ContractStatus.FIRMADO,
+        signedDate = "2026-10-12",
+        branch = Branch.SUR,
+        advisorName = "Roberto Gómez",
+    ),
+    SaleContract(
+        id = 4,
+        quotationFolio = "COT-0005",
+        clientName = "Fernando Silva",
+        clientDocument = "1055566778",
+        vehicleId = 1,
+        vin = "1FA6P8CF0R5111111",
+        finalPrice = 95_000_000,
+        deposit = 0,
+        paymentMethod = PaymentMethod.CONTADO,
+        status = ContractStatus.FIRMADO,
+        signedDate = "2026-09-20",
+        branch = Branch.CENTRO,
+        advisorName = "Ana Lucía Martínez",
     ),
 )
 
