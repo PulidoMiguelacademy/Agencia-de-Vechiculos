@@ -25,7 +25,7 @@ import com.example.agencia_de_vechiculos.model.VehicleStatus
  * 
  */
 class ContractRepository(
-    private val quotations: List<Quotation> = sampleQuotations,
+    private val quotationRepository: QuotationRepository = QuotationRepository(),
     private val customerFiles: List<CustomerFile> = sampleCustomerFiles,
     private val reservations: List<Reservation> = sampleReservations,
     private val vehicleRepository: VehicleRepository = VehicleRepository(),
@@ -49,7 +49,8 @@ class ContractRepository(
      * devuelve todas las cotizaciones, aceptadas o no
      * 
      */
-    fun allQuotations(): List<Quotation> = quotations.toList()
+    fun allQuotations(): List<Quotation> =
+        quotationRepository.allQuotations()
 
     /**
      * 
@@ -94,8 +95,10 @@ class ContractRepository(
      * 
      */
     fun generate(quotationFolio: String): ContractGenerationResult {
-        val quotation = quotations.firstOrNull { it.folio == quotationFolio.trim() }
-            ?: return ContractGenerationResult.InvalidData("La cotización seleccionada no existe")
+        val quotation = quotationRepository.quotationByFolio(quotationFolio)
+            ?: return ContractGenerationResult.InvalidData(
+                "La cotización seleccionada no existe"
+            )
 
         if (quotation.status != QuotationStatus.ACEPTADA) {
             return ContractGenerationResult.InvalidData(
