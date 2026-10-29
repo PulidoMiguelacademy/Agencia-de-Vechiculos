@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- PDF de cotizaciones: HU-14 -->
+    <cache-path
+        name="quotation_pdfs"
+        path="quotes/" />
+
+    <!-- PDF de órdenes de servicio: HU-30 -->
+    <cache-path
+        name="service_order_pdfs"
+        path="service_orders/" />
+
+</paths>

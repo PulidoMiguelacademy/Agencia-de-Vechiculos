@@ -68,6 +68,7 @@ data class PreviousDamage(
 enum class ServiceOrderStatus(val label: String) {
     ABIERTA("Abierta"),
     EN_DIAGNOSTICO("En diagnóstico"),
+    FINALIZADA("Finalizada")
 }
 
 /**
@@ -171,6 +172,8 @@ data class ServiceOrder(
      * 
      */
     val status: ServiceOrderStatus = ServiceOrderStatus.ABIERTA,
+    val completedDate: String? = null,
+    val totalCost: Long? = null,
 ) {
     /**
      * 

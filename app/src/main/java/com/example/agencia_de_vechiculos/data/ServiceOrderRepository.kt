@@ -9,6 +9,7 @@ import com.example.agencia_de_vechiculos.model.ServiceOrderSignResult
 import com.example.agencia_de_vechiculos.model.ServiceOrderStatus
 import com.example.agencia_de_vechiculos.model.VehicleArea
 import com.example.agencia_de_vechiculos.model.WorkshopAppointment
+import androidx.compose.runtime.mutableStateListOf
 
 /**
  * 
@@ -26,7 +27,7 @@ class ServiceOrderRepository(
      * las órdenes abiertas o ya en diagnóstico
      * 
      */
-    private val orders = mutableListOf<ServiceOrder>()
+    private val orders = mutableStateListOf<ServiceOrder>()
 
     /**
      * 
@@ -191,6 +192,63 @@ class ServiceOrderRepository(
         orders[index] = signed
         return ServiceOrderSignResult.Signed(signed)
     }
+    /**
+     * HU-30: Consulta el historial de órdenes de un vehículo.
+     * Incluye órdenes abiertas y órdenes en diagnóstico.
+     */
+    fun serviceHistory(plate: String): List<ServiceOrder> {
+        val cleanPlate = plate.trim().uppercase()
+
+        if (cleanPlate.isEmpty()) return emptyList()
+
+        return orders
+            .filter {
+                it.plate.trim().uppercase() == cleanPlate
+            }
+            .sortedWith(
+                compareByDescending<ServiceOrder> { it.openedDate }
+                    .thenByDescending { it.id }
+            )
+    }
+
+    /**
+     * Devuelve todas las órdenes para permitir consultar
+     * el historial de diferentes vehículos.
+     */
+    fun allServiceOrders(): List<ServiceOrder> =
+        orders.toList()
+
+
+
+    fun completeOrder(
+        orderId: Int,
+        completedDate: String,
+        totalCost: Long = 0L
+    ): Boolean {
+
+        val index = orders.indexOfFirst { it.id == orderId }
+
+        if (index == -1) return false
+
+        val order = orders[index]
+
+        if (order.status != ServiceOrderStatus.EN_DIAGNOSTICO) {
+            return false
+        }
+
+        if (order.mileageKm == null || totalCost < 0L) {
+            return false
+        }
+
+        orders[index] = order.copy(
+            status = ServiceOrderStatus.FINALIZADA,
+            completedDate = completedDate,
+            totalCost = totalCost
+        )
+
+        return true
+    }
+
 
     /**
      * 
